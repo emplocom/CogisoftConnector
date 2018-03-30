@@ -1,0 +1,255 @@
+using System;
+using System.Configuration;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Web.Http;
+using CogisoftConnector.Logic;
+using CogisoftConnector.Models;
+using CogisoftConnector.Models.WebhookModels.EmploRequestModels;
+using CogisoftConnector.Models.WebhookModels.EmploResponseModels;
+using EmploApiSDK.Logger;
+using Newtonsoft.Json;
+
+namespace CogisoftConnector.Controllers
+{
+    /// <summary>
+    /// Actions from this controller should be registered as webhook endpoints in emplo
+    /// </summary>
+    public class VacationRequestsApiController : ApiController
+    {
+        CogisoftWebhookLogic _cogisoftWebhookLogic;
+        CogisoftSyncVacationDataLogic _cogisoftSyncVacationDataLogic;
+        ILogger _logger;
+
+        public VacationRequestsApiController()
+        {
+            _logger = LoggerFactory.CreateLogger(null);
+
+            _cogisoftSyncVacationDataLogic = new CogisoftSyncVacationDataLogic(_logger);
+            _cogisoftWebhookLogic = new CogisoftWebhookLogic(_logger);
+            
+        }
+
+        /// <summary>
+        /// Endpoint listening for vacation creation event in emplo
+        /// </summary>
+        [HttpPost]
+        public HttpResponseMessage VacationCreated([FromBody] VacationCreatedWebhookModel model)
+        {
+            _logger.WriteLine($"Webhook received: VacationCreated, {JsonConvert.SerializeObject(model)}");
+
+            try
+            {
+                var response =
+                    new HttpResponseMessage(HttpStatusCode.Accepted);
+
+                var commisionId = _cogisoftWebhookLogic.SendVacationCreatedRequest(model);
+
+                var url = this.Url.Link("DefaultApi",
+                    new
+                    {
+                        Controller = "VacationRequestsApi",
+                        Action = "CheckAsyncOperationState",
+                        commisionIdentifier = commisionId,
+                        operationType = OperationType.Create,
+                        externalEmployeeIdentifier = model.ExternalEmployeeId,
+                        externalVacationTypeIdentifier = model.ExternalVacationTypeId,
+                        hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
+                    });
+
+                response.Content = new HttpMessageContent(new HttpResponseMessage(HttpStatusCode.Accepted));
+                response.Content.Headers.ContentLocation = new Uri(url);
+
+                _logger.WriteLine($"Webhook VacationCreated response: {response}");
+                return response;
+            }
+            catch (Exception e)
+            {
+                throw new HttpResponseException(BuildErrorResponseFromException(e));
+            }
+        }
+
+        /// <summary>
+        /// Endpoint listening for vacation update event in emplo
+        /// </summary>
+        [HttpPost]
+        public HttpResponseMessage VacationUpdated([FromBody] VacationEditedWebhookModel model)
+        {
+            _logger.WriteLine($"Webhook received: VacationUpdated, {JsonConvert.SerializeObject(model)}");
+
+            try
+            {
+                var response =
+                    new HttpResponseMessage(HttpStatusCode.Accepted);
+
+                var commisionId = _cogisoftWebhookLogic.SendVacationEditedRequest(model);
+
+                var url = this.Url.Link("DefaultApi",
+                    new
+                    {
+                        Controller = "VacationRequestsApi",
+                        Action = "CheckAsyncOperationState",
+                        commisionIdentifier = commisionId,
+                        operationType = OperationType.Update,
+                        externalEmployeeIdentifier = model.ExternalEmployeeId,
+                        externalVacationTypeIdentifier = model.ExternalVacationTypeId,
+                        hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
+                    });
+
+                response.Content = new HttpMessageContent(new HttpResponseMessage(HttpStatusCode.Accepted));
+                response.Content.Headers.ContentLocation = new Uri(url);
+
+                _logger.WriteLine($"Webhook VacationUpdated response: {response}");
+                return response;
+            }
+            catch (Exception e)
+            {
+                throw new HttpResponseException(BuildErrorResponseFromException(e));
+            }
+        }
+
+        /// <summary>
+        /// Endpoint listening for vacation status change event in emplo
+        /// </summary>
+        [HttpPost]
+        public HttpResponseMessage VacationStatusChanged([FromBody] VacationStatusChangedWebhookModel model)
+        {
+            _logger.WriteLine($"Webhook received: VacationStatusChanged, {model}");
+
+            try
+            {
+                if (model.NewStatus == VacationStatusEnum.Canceled
+                    || model.NewStatus == VacationStatusEnum.Removed
+                    || model.NewStatus == VacationStatusEnum.Rejected)
+                {
+                    var response =
+                        new HttpResponseMessage(HttpStatusCode.Accepted);
+
+                    var commisionId = _cogisoftWebhookLogic.SendVacationCancelledRequest(model);
+
+                    var url = this.Url.Link("DefaultApi",
+                        new
+                        {
+                            Controller = "VacationRequestsApi",
+                            Action = "CheckAsyncOperationState",
+                            commisionIdentifier = commisionId,
+                            operationType = OperationType.StatusChanged,
+                            externalEmployeeIdentifier = model.ExternalEmployeeId,
+                            externalVacationTypeIdentifier = model.ExternalVacationTypeId,
+                            hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
+                        });
+
+                    response.Content = new HttpMessageContent(new HttpResponseMessage(HttpStatusCode.Accepted));
+                    response.Content.Headers.ContentLocation = new Uri(url);
+
+                    _logger.WriteLine($"Webhook VacationStatusChanged response: {response}");
+                    return response;
+                }
+                else
+                {
+                    _logger.WriteLine($"Webhook VacationStatusChanged ignored");
+                    return new HttpResponseMessage(HttpStatusCode.OK);
+                }
+            }
+            catch (Exception e)
+            {
+                throw new HttpResponseException(BuildErrorResponseFromException(e));
+            }
+        }
+
+        /// <summary>
+        /// Returns status of asynchronous request to Cogisoft API
+        /// </summary>
+        /// <param name="commisionIdentifier">Original request id</param>
+        /// <param name="operationType">Type of request for which the status is checked</param>
+        /// <param name="externalEmployeeIdentifier">Employee id in Cogisoft to be used for vacation days balance update when the operation status is successful</param>
+        /// <param name="externalVacationTypeIdentifier">Vacation type id in Cogisoft to be used for vacation days balance update when the operation status is successful</param>
+        /// <param name="hasManagedVacationDaysBalance">True if vacation days balance should be updated in emplo when the operation status is successful</param>
+        [HttpPost]
+        public HttpResponseMessage CheckAsyncOperationState(string commisionIdentifier, OperationType operationType, string externalEmployeeIdentifier, string externalVacationTypeIdentifier, bool hasManagedVacationDaysBalance)
+        {
+            _logger.WriteLine($"Webhook status check, Commission Id: {commisionIdentifier}, Operation type: {operationType}, External employee identifier: {externalVacationTypeIdentifier}, External vacation type identifier {externalVacationTypeIdentifier}, HasManagedVacationDaysBalance: {hasManagedVacationDaysBalance}");
+
+            try
+            {
+                var result = _cogisoftWebhookLogic.CheckAsyncOperationState(commisionIdentifier);
+
+                if (!result.ci[0].processed)
+                {
+                    var response =
+                        new HttpResponseMessage(HttpStatusCode.Accepted);
+
+                    var url = this.Url.Link("DefaultApi",
+                        new
+                        {
+                            Controller = "VacationRequestsApi",
+                            Action = "CheckAsyncOperationState",
+                            commisionIdentifier,
+                            operationType,
+                            externalEmployeeIdentifier,
+                            externalVacationTypeIdentifier,
+                            hasManagedVacationDaysBalance
+                        });
+
+                    response.Content = new HttpMessageContent(new HttpResponseMessage(HttpStatusCode.Accepted));
+                    response.Content.Headers.ContentLocation = new Uri(url);
+
+                    _logger.WriteLine($"Status check result: STILL PROCESSING, response: {response}");
+                    return response;
+                }
+                else
+                {
+                    if (result.ci[0].code != 0)
+                    {
+                        throw new Exception("An error occurred during request processing by the external system, error code: " + result.ci[0].code);
+                    }
+
+                    if(hasManagedVacationDaysBalance)
+                    {
+                        _cogisoftSyncVacationDataLogic.SyncVacationDataForSingleEmployee(externalVacationTypeIdentifier, externalEmployeeIdentifier);
+                    }
+                    
+                    if (operationType == OperationType.Create)
+                    {
+                        var response = new HttpResponseMessage(HttpStatusCode.Created)
+                        {
+                            Content = new StringContent(
+                                JsonConvert.SerializeObject(
+                                    new CreatedObjectResponseEmploModel() {CreatedObjectIdentifier = result.ci[0].id}),
+                                Encoding.UTF8, "application/json")
+                        };
+
+                        _logger.WriteLine($"Status check result: CREATED, response: {response}");
+                        return response;
+                    }
+                    else
+                    {
+                        _logger.WriteLine($"Status check result: OK");
+                        return new HttpResponseMessage(HttpStatusCode.OK);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                throw new HttpResponseException(BuildErrorResponseFromException(e));
+            }
+        }
+
+        [NonAction]
+        private HttpResponseMessage BuildErrorResponseFromException(Exception e)
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+            {
+                Content = new StringContent(
+                    JsonConvert.SerializeObject(
+                        new ErrorMessageResponseEmploModel() { ErrorMessage = e.Message }), Encoding.UTF8,
+                    "application/json")
+            };
+
+            _logger.WriteLine($"Status check result: ERROR, response: {response}");
+            return response;
+        }
+    }
+}
