@@ -59,10 +59,10 @@ namespace CogisoftConnector.Controllers
                         hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
                     });
 
-                response.Content = new HttpMessageContent(new HttpResponseMessage(HttpStatusCode.Accepted));
+                response.Content = new StringContent(string.Empty);
                 response.Content.Headers.ContentLocation = new Uri(url);
 
-                _logger.WriteLine($"Webhook VacationCreated response: {response}");
+                _logger.WriteLine($"Webhook VacationCreated response: {JsonConvert.SerializeObject(response)}");
                 return response;
             }
             catch (Exception e)
@@ -98,10 +98,10 @@ namespace CogisoftConnector.Controllers
                         hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
                     });
 
-                response.Content = new HttpMessageContent(new HttpResponseMessage(HttpStatusCode.Accepted));
+                response.Content = new StringContent(string.Empty);
                 response.Content.Headers.ContentLocation = new Uri(url);
 
-                _logger.WriteLine($"Webhook VacationUpdated response: {response}");
+                _logger.WriteLine($"Webhook VacationUpdated response: {JsonConvert.SerializeObject(response)}");
                 return response;
             }
             catch (Exception e)
@@ -116,7 +116,7 @@ namespace CogisoftConnector.Controllers
         [HttpPost]
         public HttpResponseMessage VacationStatusChanged([FromBody] VacationStatusChangedWebhookModel model)
         {
-            _logger.WriteLine($"Webhook received: VacationStatusChanged, {model}");
+            _logger.WriteLine($"Webhook received: VacationStatusChanged, {JsonConvert.SerializeObject(model)}");
 
             try
             {
@@ -141,10 +141,10 @@ namespace CogisoftConnector.Controllers
                             hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
                         });
 
-                    response.Content = new HttpMessageContent(new HttpResponseMessage(HttpStatusCode.Accepted));
+                    response.Content = new StringContent(string.Empty);
                     response.Content.Headers.ContentLocation = new Uri(url);
 
-                    _logger.WriteLine($"Webhook VacationStatusChanged response: {response}");
+                    _logger.WriteLine($"Webhook VacationStatusChanged response: {JsonConvert.SerializeObject(response)}");
                     return response;
                 }
                 else
@@ -193,10 +193,10 @@ namespace CogisoftConnector.Controllers
                             hasManagedVacationDaysBalance
                         });
 
-                    response.Content = new HttpMessageContent(new HttpResponseMessage(HttpStatusCode.Accepted));
+                    response.Content = new StringContent(string.Empty);
                     response.Content.Headers.ContentLocation = new Uri(url);
 
-                    _logger.WriteLine($"Status check result: STILL PROCESSING, response: {response}");
+                    _logger.WriteLine($"Status check result: STILL PROCESSING, response: {JsonConvert.SerializeObject(response)}");
                     return response;
                 }
                 else
@@ -221,7 +221,7 @@ namespace CogisoftConnector.Controllers
                                 Encoding.UTF8, "application/json")
                         };
 
-                        _logger.WriteLine($"Status check result: CREATED, response: {response}");
+                        _logger.WriteLine($"Status check result: CREATED, response: {JsonConvert.SerializeObject(response)}");
                         return response;
                     }
                     else
@@ -244,12 +244,18 @@ namespace CogisoftConnector.Controllers
             {
                 Content = new StringContent(
                     JsonConvert.SerializeObject(
-                        new ErrorMessageResponseEmploModel() { ErrorMessage = e.Message }), Encoding.UTF8,
+                        new ErrorMessageResponseEmploModel() { ErrorMessage = ExceptionLoggingUtils.ExceptionAsString(e) }), Encoding.UTF8,
                     "application/json")
             };
 
-            _logger.WriteLine($"Status check result: ERROR, response: {response}");
+            _logger.WriteLine($"Status check result: ERROR, response: {JsonConvert.SerializeObject(response)}");
             return response;
+        }
+
+        [HttpGet]
+        public HttpResponseMessage Ping()
+        {
+            return new HttpResponseMessage(HttpStatusCode.OK) {Content = new StringContent("Ok!") };
         }
     }
 }

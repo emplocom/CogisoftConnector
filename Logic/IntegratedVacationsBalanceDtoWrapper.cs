@@ -25,10 +25,14 @@ namespace CogisoftConnector.Models.WebhookModels.CogisoftDataModels
                 return;
             }
 
-            if (!decimal.TryParse(employeeResponseCollection.sc[3].ToString().Replace(":",","), out Result.AvailableHours))
+            if (employeeResponseCollection.sc[3].ToString().Contains("n"))
             {
                 MissingData = true;
                 return;
+            }
+            else
+            {
+                Result.AvailableHours = ParseAndConvertHours(employeeResponseCollection.sc[3].ToString(), Result.ExternalEmployeeId, employeeResponseCollection.sc[0].ToString());
             }
 
             if (!decimal.TryParse(employeeResponseCollection.sc[4].ToString(), out Result.OutstandingDays))
@@ -37,10 +41,14 @@ namespace CogisoftConnector.Models.WebhookModels.CogisoftDataModels
                 return;
             }
 
-            if (!decimal.TryParse(employeeResponseCollection.sc[5].ToString().Replace(":", ","), out Result.OutstandingHours))
+            if (employeeResponseCollection.sc[5].ToString().Contains("n"))
             {
                 MissingData = true;
                 return;
+            }
+            else
+            {
+                Result.OutstandingHours = ParseAndConvertHours(employeeResponseCollection.sc[5].ToString(), Result.ExternalEmployeeId, employeeResponseCollection.sc[0].ToString());
             }
 
             if (!decimal.TryParse(employeeResponseCollection.sc[6].ToString(), out Result.OnDemandDays))
@@ -48,6 +56,28 @@ namespace CogisoftConnector.Models.WebhookModels.CogisoftDataModels
                 MissingData = true;
                 return;
             }
+        }
+
+        private decimal ParseAndConvertHours(string hours, string externalEmployeeId, string externalBalanceId)
+        {
+            var hourComponent = hours.Substring(0, hours.IndexOf(":"));
+            var minuteComponent = hours.Substring(hours.IndexOf(":") + 1);
+
+            decimal parsedHourComponent;
+
+            if (!decimal.TryParse(hourComponent, out parsedHourComponent))
+            {
+                throw new Exception($"Could not parse hour component. Hour component string: {hourComponent}, full string: {hours}, External employee Id: {externalEmployeeId}, Balance external Id: {externalBalanceId}");
+            }
+
+            decimal parsedMinuteComponent;
+
+            if (!decimal.TryParse(minuteComponent, out parsedMinuteComponent))
+            {
+                throw new Exception($"Could not parse minute component. Hour component string: {hourComponent}, full string: {hours}, External employee Id: {externalEmployeeId}, Balance external Id: {externalBalanceId}");
+            }
+
+            return parsedHourComponent + (parsedMinuteComponent / 60.0M);
         }
     }
 }

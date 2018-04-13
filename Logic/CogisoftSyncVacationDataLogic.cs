@@ -115,7 +115,7 @@ namespace CogisoftConnector.Logic
             }
             catch (Exception e)
             {
-                _logger.WriteLine($"An unexpected error occurred, exception: {ExceptionAsString(e)}");
+                _logger.WriteLine($"An unexpected error occurred, exception: {ExceptionLoggingUtils.ExceptionAsString(e)}");
             }
         }
 
@@ -129,23 +129,6 @@ namespace CogisoftConnector.Logic
         public void SyncAllVacationData()
         {
             SyncVacationData(ConfigurationManager.AppSettings["DefaultVacationTypeIdForSynchronization"], null);
-        }
-
-        private string ExceptionAsString(Exception ex, int depth = 0)
-        {
-            const int maxDepth = 10;
-
-            if (ex == null)
-            {
-                return "null";
-            }
-
-            if (depth > maxDepth)
-            {
-                return $"Max inner exception depth ({maxDepth}) exceeded, stopping further recursive calls";
-            }
-
-            return $"Message: {ex.Message}</br>StackTrace: {ex.StackTrace}</br> InnerException: </br> {ExceptionAsString(ex.InnerException, ++depth)}";
         }
     }
 }
