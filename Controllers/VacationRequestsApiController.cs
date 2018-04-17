@@ -7,8 +7,8 @@ using System.Text;
 using System.Web.Http;
 using CogisoftConnector.Logic;
 using CogisoftConnector.Models;
-using CogisoftConnector.Models.WebhookModels.EmploRequestModels;
-using CogisoftConnector.Models.WebhookModels.EmploResponseModels;
+using CogisoftConnector.Models.EmploWebhookModels.RequestModels;
+using CogisoftConnector.Models.EmploWebhookModels.ResponseModels;
 using EmploApiSDK.Logger;
 using Newtonsoft.Json;
 

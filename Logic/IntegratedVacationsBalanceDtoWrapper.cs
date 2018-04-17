@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using CogisoftConnector.Models.WebhookModels.CogisoftResponseModels;
-using EmploApiSDK.Models;
+using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
+using EmploApiSDK.ApiModels.IntegratedVacations;
 
-namespace CogisoftConnector.Models.WebhookModels.CogisoftDataModels
+namespace CogisoftConnector.Logic
 {
     public class IntegratedVacationsBalanceDtoWrapper
     {

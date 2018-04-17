@@ -1,6 +1,6 @@
 using System;
 
-namespace CogisoftConnector.Models.WebhookModels.EmploRequestModels
+namespace CogisoftConnector.Models.EmploWebhookModels.RequestModels
 {
     public class VacationCreatedWebhookModel
     {

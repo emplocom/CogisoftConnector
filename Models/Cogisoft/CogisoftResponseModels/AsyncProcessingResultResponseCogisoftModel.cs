@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-
-namespace CogisoftConnector.Models.WebhookModels.CogisoftResponseModels
+﻿namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
 {
     //Struktura odpowiedzi na zapytanie o status asynchronicznej operacji
     public class AsyncProcessingResultResponseCogisoftModel

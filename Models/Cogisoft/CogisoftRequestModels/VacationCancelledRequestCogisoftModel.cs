@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Web;
-using CogisoftConnector.Models.WebhookModels.CogisoftSOAPEnvelopeModels;
+using CogisoftConnector.Models.Cogisoft.CogisoftSOAPEnvelopeModels;
 
-namespace CogisoftConnector.Models.WebhookModels.CogisoftRequestModels
+namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
 {
     public class VacationCancelledRequestCogisoftModel : IRequestCogisoftModel
     {

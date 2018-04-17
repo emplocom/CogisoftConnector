@@ -1,4 +1,4 @@
-namespace CogisoftConnector.Models
+namespace CogisoftConnector.Models.EmploWebhookModels.RequestModels
 {
     /// <summary>
     /// Vacation requests statuses in emplo

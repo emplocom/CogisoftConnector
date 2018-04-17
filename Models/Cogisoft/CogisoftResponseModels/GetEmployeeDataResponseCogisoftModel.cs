@@ -1,31 +1,12 @@
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Web;
 
 namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
 {
-    public class VacationDataResponseCogisoftModel
+    public class GetEmployeeDataResponseCogisoftModel
     {
-        //{
-        //    "f" : "json", "qr" : [ {
-        //        "trc" : 1, "v" : -2, "h" : {
-        //            "c" : [ "fk", "string", "numeric", "string","numeric","numeric" ]
-        //        }, "p" : [ {
-        //            "i" : 0, "left" : 0, "off" : 0, "r" : [ {
-        //                "sc" : [ 29, {
-        //                    "n":"1"
-        //                }, {
-        //                    "n":"1"
-        //                }, {
-        //                    "n":"1"
-        //                }, {
-        //                    "n":"1"
-        //                }, {
-        //                    "n":"1"
-        //                } ]
-        //            } ]
-        //        } ], "qid" : "a46bf4f1"
-        //    } ]
-        //}
-
         public class H
         {
             public List<string> c { get; set; }
@@ -33,6 +14,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
 
         public class R
         {
+            public string bg { get; set; }
             public List<object> sc { get; set; }
         }
 

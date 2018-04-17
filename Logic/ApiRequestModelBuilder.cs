@@ -1,0 +1,42 @@
+﻿using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
+using EmploApiSDK.ApiModels.Employees;
+using EmploApiSDK.Logger;
+
+namespace CogisoftConnector.Logic
+{
+    public class ApiRequestModelBuilder
+    {
+        private readonly CogisoftEmployeeImportConfiguration _cogisoftEmployeeImportMappingConfiguration;
+
+        public ApiRequestModelBuilder(ILogger logger, CogisoftEmployeeImportConfiguration configuration)
+        {
+            _cogisoftEmployeeImportMappingConfiguration = configuration;new CogisoftEmployeeImportConfiguration(logger);
+        }
+
+        public UserDataRow BuildUserDataRow(GetEmployeeDataResponseCogisoftModel.R row)
+        {
+            var importedEmployeeRow = new UserDataRow();
+
+            foreach (var mapping in _cogisoftEmployeeImportMappingConfiguration.PropertyMappings)
+            {
+                var value = row.sc[_cogisoftEmployeeImportMappingConfiguration.PropertyMappings.IndexOf(mapping)].ToString();
+
+                if (value.Equals("{\"n\":\"1\"}"))
+                {
+                    importedEmployeeRow.Add(mapping.EmploPropertyName, null);
+                }
+                else
+                {
+                    importedEmployeeRow.Add(mapping.EmploPropertyName, NormalizeString(value));
+                }
+            }
+
+            return importedEmployeeRow;
+        }
+
+        private string NormalizeString(string @string)
+        {
+            return @string.Trim('\t', ' ');
+        }
+    }
+}

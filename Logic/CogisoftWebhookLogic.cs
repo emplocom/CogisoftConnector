@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CogisoftConnector.Models;
-using CogisoftConnector.Models.WebhookModels.CogisoftRequestModels;
-using CogisoftConnector.Models.WebhookModels.CogisoftResponseModels;
-using CogisoftConnector.Models.WebhookModels.EmploRequestModels;
+using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
+using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
+using CogisoftConnector.Models.EmploWebhookModels.RequestModels;
 using EmploApiSDK.Logger;
 using Newtonsoft.Json;
 
@@ -11,7 +11,7 @@ namespace CogisoftConnector.Logic
 {
     public class CogisoftWebhookLogic
     {
-        private ILogger _logger;
+        private readonly ILogger _logger;
 
         public CogisoftWebhookLogic(ILogger logger)
         {
@@ -20,7 +20,7 @@ namespace CogisoftConnector.Logic
 
         public string SendVacationCreatedRequest(VacationCreatedWebhookModel emploRequest)
         {
-            using (var client = new CogisoftServiceClient())
+            using (var client = new CogisoftServiceClient(_logger))
             {
                 VacationCreatedRequestCogisoftModel cogisoftRequest = new VacationCreatedRequestCogisoftModel(
                     emploRequest.ExternalEmployeeId,
@@ -39,7 +39,7 @@ namespace CogisoftConnector.Logic
 
         public string SendVacationEditedRequest(VacationEditedWebhookModel emploRequest)
         {
-            using (var client = new CogisoftServiceClient())
+            using (var client = new CogisoftServiceClient(_logger))
             {
                 VacationEditedRequestCogisoftModel cogisoftRequest = new VacationEditedRequestCogisoftModel(
                     emploRequest.ExternalVacationId,
@@ -58,7 +58,7 @@ namespace CogisoftConnector.Logic
 
         public string SendVacationCancelledRequest(VacationStatusChangedWebhookModel emploRequest)
         {
-            using (var client = new CogisoftServiceClient())
+            using (var client = new CogisoftServiceClient(_logger))
             {
                 VacationCancelledRequestCogisoftModel cogisoftRequest = new VacationCancelledRequestCogisoftModel(
                     emploRequest.ExternalVacationId
@@ -74,7 +74,7 @@ namespace CogisoftConnector.Logic
 
         public AsyncProcessingResultResponseCogisoftModel CheckAsyncOperationState(string commisionIdentifier)
         {
-            using (var client = new CogisoftServiceClient())
+            using (var client = new CogisoftServiceClient(_logger))
             {
                 AsyncCommisionStatusRequestCogisoftModel cogisoftRequest = new AsyncCommisionStatusRequestCogisoftModel(
                     commisionIdentifier);

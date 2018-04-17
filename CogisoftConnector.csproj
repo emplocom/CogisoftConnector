@@ -113,18 +113,24 @@
   <ItemGroup>
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Controllers\EmployeeImportController.cs" />
     <Compile Include="Controllers\VacationBalanceApiController.cs" />
     <Compile Include="Controllers\VacationRequestsApiController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Logic\ApiRequestModelBuilder.cs" />
+    <Compile Include="Logic\CogisoftEmployeeImportConfiguration.cs" />
     <Compile Include="Logic\CogisoftServiceClient.cs" />
     <Compile Include="Logic\CogisoftWebhookLogic.cs" />
     <Compile Include="Logic\CogisoftSyncVacationDataLogic.cs" />
+    <Compile Include="Logic\EmployeeImportLogic.cs" />
+    <Compile Include="Models\Cogisoft\CogisoftRequestModels\GetEmployeeDataRequestCogisoftModel.cs" />
+    <Compile Include="Models\Cogisoft\CogisoftResponseModels\GetEmployeeDataResponseCogisoftModel.cs" />
     <Compile Include="Models\EmploWebhookModels\RequestModels\OperationTypeEnum.cs" />
     <Compile Include="Logic\IntegratedVacationsBalanceDtoWrapper.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\AsyncCommisionStatusRequestCogisoftModel.cs" />
-    <Compile Include="Models\Cogisoft\CogisoftRequestModels\GetVacationDataCogisoftModel.cs" />
+    <Compile Include="Models\Cogisoft\CogisoftRequestModels\GetVacationDataRequestCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\IRequestCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\LoginRequestCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\VacationCancelledRequestCogisoftModel.cs" />
