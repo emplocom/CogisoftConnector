@@ -21,7 +21,7 @@ namespace CogisoftConnector.Logic
             {
                 var value = row.sc[_cogisoftEmployeeImportMappingConfiguration.PropertyMappings.IndexOf(mapping)].ToString();
 
-                if (value.Equals("{\"n\":\"1\"}"))
+                if (value.Trim().Replace("\r\n", "").Replace(" ", "").Equals(@"{""n"":""1""}"))
                 {
                     importedEmployeeRow.Add(mapping.EmploPropertyName, null);
                 }

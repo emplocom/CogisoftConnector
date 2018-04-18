@@ -22,7 +22,7 @@ namespace CogisoftConnector.Controllers
         /// <summary>
         /// Triggers employee import from Cogisoft to emplo for all employees.
         /// </summary>
-        [HttpPost]
+        [HttpGet]
         public HttpResponseMessage SynchronizeEmployees()
         {
             _employeeImportLogic.ImportEmployeeData();

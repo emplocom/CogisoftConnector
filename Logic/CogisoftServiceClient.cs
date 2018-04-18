@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Web;
 using System.Xml.Linq;
 using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
@@ -74,7 +75,7 @@ namespace CogisoftConnector.Logic
 
             var responseString = httpResponseMessage.Content.ReadAsStringAsync().Result;
 
-            _logger.WriteLine($"Cogisoft response of type {typeof(TResponse).Name}: {responseString}");
+            _logger.WriteLine($"Cogisoft response of type {typeof(TResponse).Name}: {HttpUtility.HtmlDecode(responseString)}");
 
             try
             {
