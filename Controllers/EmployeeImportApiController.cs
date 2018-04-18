@@ -9,11 +9,11 @@ using EmploApiSDK.Logger;
 
 namespace CogisoftConnector.Controllers
 {
-    public class EmployeeImportController : ApiController
+    public class EmployeeImportApiController : ApiController
     {
         private EmployeeImportLogic _employeeImportLogic;
 
-        public EmployeeImportController()
+        public EmployeeImportApiController()
         {
             ILogger logger = LoggerFactory.CreateLogger(null);
             _employeeImportLogic = new EmployeeImportLogic(logger);
@@ -27,12 +27,6 @@ namespace CogisoftConnector.Controllers
         {
             _employeeImportLogic.ImportEmployeeData();
             return new HttpResponseMessage(HttpStatusCode.OK);
-        }
-
-        [HttpGet]
-        public HttpResponseMessage Ping()
-        {
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("Ok!") };
         }
     }
 }

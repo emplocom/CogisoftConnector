@@ -30,6 +30,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
         public Q(List<string> selectProperties)
         {
             ss = selectProperties;
+            p = new P();
         }
 
         public string tbl { get; set; } = "KADR:PRACOWNICY";

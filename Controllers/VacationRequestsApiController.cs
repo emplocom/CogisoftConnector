@@ -251,11 +251,5 @@ namespace CogisoftConnector.Controllers
             _logger.WriteLine($"Status check result: ERROR, response: {JsonConvert.SerializeObject(response)}");
             return response;
         }
-
-        [HttpGet]
-        public HttpResponseMessage Ping()
-        {
-            return new HttpResponseMessage(HttpStatusCode.OK) {Content = new StringContent("Ok!") };
-        }
     }
 }
