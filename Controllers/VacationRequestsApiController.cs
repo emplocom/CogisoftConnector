@@ -170,7 +170,7 @@ namespace CogisoftConnector.Controllers
         [HttpPost]
         public HttpResponseMessage CheckAsyncOperationState(string commisionIdentifier, OperationType operationType, string externalEmployeeIdentifier, string externalVacationTypeIdentifier, bool hasManagedVacationDaysBalance)
         {
-            _logger.WriteLine($"Webhook status check, Commission Id: {commisionIdentifier}, Operation type: {operationType}, External employee identifier: {externalVacationTypeIdentifier}, External vacation type identifier {externalVacationTypeIdentifier}, HasManagedVacationDaysBalance: {hasManagedVacationDaysBalance}");
+            _logger.WriteLine($"Webhook status check, Commission Id: {commisionIdentifier}, Operation type: {operationType}, External employee identifier: {externalEmployeeIdentifier}, External vacation type identifier {externalVacationTypeIdentifier}, HasManagedVacationDaysBalance: {hasManagedVacationDaysBalance}");
 
             try
             {
