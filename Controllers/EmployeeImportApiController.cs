@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
 using CogisoftConnector.Logic;
 using EmploApiSDK.Logger;
@@ -23,9 +24,9 @@ namespace CogisoftConnector.Controllers
         /// Triggers employee import from Cogisoft to emplo for all employees.
         /// </summary>
         [HttpGet]
-        public HttpResponseMessage SynchronizeEmployees()
+        public async Task<HttpResponseMessage> SynchronizeEmployees()
         {
-            _employeeImportLogic.ImportEmployeeData();
+            await _employeeImportLogic.ImportEmployeeData();
             return new HttpResponseMessage(HttpStatusCode.OK);
         }
     }

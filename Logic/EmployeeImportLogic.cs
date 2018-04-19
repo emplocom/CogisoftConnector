@@ -67,13 +67,13 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        public void ImportEmployeeData()
+        public async Task ImportEmployeeData()
         {
             try
             {
                 using (var client = new CogisoftServiceClient(_logger))
                 {
-                    ImportEmployeeDataInternal(client).Wait();
+                    await ImportEmployeeDataInternal(client);
                 }
             }
             catch (Exception e)

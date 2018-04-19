@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Threading.Tasks;
 using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.Client;
@@ -16,7 +17,7 @@ namespace CogisoftConnector.Logic
             _logger = logger;
         }
 
-        public string TestEmploConnection()
+        public async Task<string> TestEmploConnection()
         {
             try
             {
@@ -30,8 +31,8 @@ namespace CogisoftConnector.Logic
 
                 var apiClient = new ApiClient(_logger, _apiConfiguration);
 
-                var response = apiClient
-                    .SendGet<Object>(_apiConfiguration.CheckUserHasAccessUrl);
+                var response = await apiClient
+                    .SendGetAsync<Object>(_apiConfiguration.CheckUserHasAccessUrl);
 
                 return "Success!";
             }

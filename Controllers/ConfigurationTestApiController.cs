@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading.Tasks;
 using System.Web.Http;
 using CogisoftConnector.Logic;
 using EmploApiSDK.Logger;
@@ -19,9 +20,9 @@ namespace CogisoftConnector.Controllers
         }
 
         [HttpGet]
-        public HttpResponseMessage TestConnection()
+        public async Task<HttpResponseMessage> TestConnection()
         {
-            var emploResult = _configurationTestLogic.TestEmploConnection();
+            var emploResult = await _configurationTestLogic.TestEmploConnection();
             var cogisoftResult = _configurationTestLogic.TestCogisoftConnection();
 
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent($"Emplo API connection test: {emploResult}{Environment.NewLine}{Environment.NewLine}{Environment.NewLine}Cogisoft API connection test: {cogisoftResult}") };
