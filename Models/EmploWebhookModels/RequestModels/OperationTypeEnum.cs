@@ -1,4 +1,4 @@
-﻿namespace CogisoftConnector.Models
+﻿namespace CogisoftConnector.Models.EmploWebhookModels.RequestModels
 {
     public enum OperationType
     {

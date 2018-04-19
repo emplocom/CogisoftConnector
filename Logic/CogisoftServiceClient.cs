@@ -6,21 +6,26 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Web;
 using System.Xml.Linq;
-using CogisoftConnector.Models.CogisoftRequestModels;
-using CogisoftConnector.Models.CogisoftResponseModels;
-using CogisoftConnector.Models.WebhookModels.CogisoftRequestModels;
-using CogisoftConnector.Models.WebhookModels.CogisoftSOAPEnvelopeModels;
+using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
+using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
+using CogisoftConnector.Models.Cogisoft.CogisoftSOAPEnvelopeModels;
+using EmploApiSDK.Client;
+using EmploApiSDK.Logger;
 using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
 {
     public class CogisoftServiceClient : IDisposable
     {
-        private string _token;
+        private readonly ILogger _logger;
+        private readonly string _token;
 
-        public CogisoftServiceClient()
+        public CogisoftServiceClient(ILogger logger)
         {
+            _logger = logger;
+
             var loginRequest = new LoginRequestCogisoftModel(
                 ConfigurationManager.AppSettings["LinkName"],
                 ConfigurationManager.AppSettings["LinkPassword"],
@@ -59,6 +64,8 @@ namespace CogisoftConnector.Logic
             var node = xml.Root.Descendants("json").First();
             node.Value = json;
 
+            _logger.WriteLine($"Cogisoft request of type {typeof(TRequest).Name}: {xml}");
+
             var httpClient = HttpClientProvider.HttpClient;
 
             var httpResponseMessage = httpClient.PostAsync(
@@ -66,8 +73,9 @@ namespace CogisoftConnector.Logic
                     new StringContent(xml.ToString(), Encoding.UTF8, "text/xml"))
                 .Result;
 
-
             var responseString = httpResponseMessage.Content.ReadAsStringAsync().Result;
+
+            _logger.WriteLine($"Cogisoft response of type {typeof(TResponse).Name}: {HttpUtility.HtmlDecode(responseString)}");
 
             try
             {

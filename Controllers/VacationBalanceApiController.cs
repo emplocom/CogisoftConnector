@@ -31,11 +31,5 @@ namespace CogisoftConnector.Controllers
 
             return new HttpResponseMessage(HttpStatusCode.OK);
         }
-
-        [HttpGet]
-        public HttpResponseMessage Ping()
-        {
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("Ok!") };
-        }
     }
 }

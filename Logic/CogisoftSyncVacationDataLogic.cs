@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
-using CogisoftConnector.Models.WebhookModels.CogisoftDataModels;
-using CogisoftConnector.Models.WebhookModels.CogisoftRequestModels;
-using CogisoftConnector.Models.WebhookModels.CogisoftResponseModels;
+using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
+using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK;
-using EmploApiSDK.Models;
+using EmploApiSDK.ApiModels.IntegratedVacations;
+using EmploApiSDK.Client;
 using EmploApiSDK.Logger;
 using Newtonsoft.Json;
 
@@ -15,10 +15,10 @@ namespace CogisoftConnector.Logic
 {
     public class CogisoftSyncVacationDataLogic
     {
-        private ILogger _logger;
-        private ApiClient _apiClient;
+        private readonly ILogger _logger;
+        private readonly ApiClient _apiClient;
 
-        ApiConfiguration _apiConfiguration = new ApiConfiguration()
+        readonly ApiConfiguration _apiConfiguration = new ApiConfiguration()
         {
             EmploUrl = ConfigurationManager.AppSettings["EmploUrl"],
             ApiPath = ConfigurationManager.AppSettings["ApiPath"] ?? "apiv2",
@@ -44,7 +44,7 @@ namespace CogisoftConnector.Logic
             }
             _logger.WriteLine($"SyncVacationData retry counter: {retryCounter}");
 
-            GetVacationDataCogisoftModel cogisoftRequest = new GetVacationDataCogisoftModel(employeeIds);
+            GetVacationDataRequestCogisoftModel requestCogisoftRequest = new GetVacationDataRequestCogisoftModel(employeeIds);
 
             List<IntegratedVacationsBalanceDtoWrapper> employeeVacationDataModels = new List<IntegratedVacationsBalanceDtoWrapper>();
             bool anyObjectsLeft;
@@ -52,15 +52,15 @@ namespace CogisoftConnector.Logic
             do
             {
                 var response =
-                    client.PerformRequestReceiveResponse<GetVacationDataCogisoftModel,
-                        VacationDataResponseCogisoftModel>(cogisoftRequest);
+                    client.PerformRequestReceiveResponse<GetVacationDataRequestCogisoftModel,
+                        VacationDataResponseCogisoftModel>(requestCogisoftRequest);
 
                 employeeVacationDataModels.AddRange(response.GetEmployeeCollection()
                     .Select(r => new IntegratedVacationsBalanceDtoWrapper(r, externalVacationTypeIdentifier)));
 
                 anyObjectsLeft = response.AnyRemainingObjectsLeft();
 
-                cogisoftRequest.IncrementQueryIndex();
+                requestCogisoftRequest.IncrementQueryIndex();
             } while (anyObjectsLeft);
 
             if (employeeVacationDataModels.Any(m => !m.MissingData))
@@ -77,7 +77,7 @@ namespace CogisoftConnector.Logic
 
                 if (response.OperationStatus == ImportVacationDataStatusCode.Ok)
                 {
-                    _logger.WriteLine($"Employee data synchronization succeeded for employee Ids: (retry counter: {retryCounter})");
+                    _logger.WriteLine($"Employee vacation data synchronization succeeded for employee Ids: (retry counter: {retryCounter})");
                     _logger.WriteLine(string.Join(", ", employeeVacationDataModels.Where(m => !m.MissingData).Select(m => m.Result.ExternalEmployeeId)));
                 }
                 else
@@ -108,7 +108,7 @@ namespace CogisoftConnector.Logic
         {
             try
             {
-                using (var client = new CogisoftServiceClient())
+                using (var client = new CogisoftServiceClient(_logger))
                 {
                     SyncVacationDataRecursive(client, externalVacationTypeIdentifier, 0, employeeIds);
                 }

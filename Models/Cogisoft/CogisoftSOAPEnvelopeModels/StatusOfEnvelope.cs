@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-
-namespace CogisoftConnector.Models.WebhookModels.CogisoftSOAPEnvelopeModels
+namespace CogisoftConnector.Models.Cogisoft.CogisoftSOAPEnvelopeModels
 {
     public static class StatusOfEnvelope
     {

@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using CogisoftConnector.Models.WebhookModels.CogisoftSOAPEnvelopeModels;
+using CogisoftConnector.Models.Cogisoft.CogisoftSOAPEnvelopeModels;
 
-namespace CogisoftConnector.Models.WebhookModels.CogisoftRequestModels
+namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
 {
-    public class GetVacationDataCogisoftModel : IRequestCogisoftModel
+    public class GetVacationDataRequestCogisoftModel : IRequestCogisoftModel
     {
         //{ 
         //    "qp":{ 
@@ -19,7 +19,7 @@ namespace CogisoftConnector.Models.WebhookModels.CogisoftRequestModels
         //              }
         //         }
 
-        public GetVacationDataCogisoftModel(List<string> employeeIds = null)
+        public GetVacationDataRequestCogisoftModel(List<string> employeeIds = null)
         {
             qp = new QP(employeeIds);
         }
