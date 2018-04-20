@@ -1,12 +1,9 @@
 using System;
-using System.Configuration;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Web.Http;
 using CogisoftConnector.Logic;
-using CogisoftConnector.Models;
 using CogisoftConnector.Models.EmploWebhookModels.RequestModels;
 using CogisoftConnector.Models.EmploWebhookModels.ResponseModels;
 using EmploApiSDK.Logger;
@@ -170,7 +167,7 @@ namespace CogisoftConnector.Controllers
         [HttpPost]
         public HttpResponseMessage CheckAsyncOperationState(string commisionIdentifier, OperationType operationType, string externalEmployeeIdentifier, string externalVacationTypeIdentifier, bool hasManagedVacationDaysBalance)
         {
-            _logger.WriteLine($"Webhook status check, Commission Id: {commisionIdentifier}, Operation type: {operationType}, External employee identifier: {externalVacationTypeIdentifier}, External vacation type identifier {externalVacationTypeIdentifier}, HasManagedVacationDaysBalance: {hasManagedVacationDaysBalance}");
+            _logger.WriteLine($"Webhook status check, Commission Id: {commisionIdentifier}, Operation type: {operationType}, External employee identifier: {externalEmployeeIdentifier}, External vacation type identifier {externalVacationTypeIdentifier}, HasManagedVacationDaysBalance: {hasManagedVacationDaysBalance}");
 
             try
             {
@@ -248,7 +245,7 @@ namespace CogisoftConnector.Controllers
                     "application/json")
             };
 
-            _logger.WriteLine($"Status check result: ERROR, response: {JsonConvert.SerializeObject(response)}");
+            _logger.WriteLine($"Status check result: ERROR, response: {JsonConvert.SerializeObject(response)}", LogLevelEnum.Error);
             return response;
         }
     }

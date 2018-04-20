@@ -78,7 +78,7 @@ namespace CogisoftConnector.Logic
             }
             catch (Exception e)
             {
-                _logger.WriteLine($"An unexpected error occurred, exception: {ExceptionLoggingUtils.ExceptionAsString(e)}");
+                _logger.WriteLine($"An unexpected error occurred, exception: {ExceptionLoggingUtils.ExceptionAsString(e)}", LogLevelEnum.Error);
             }
         }
     }
