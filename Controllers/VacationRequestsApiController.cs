@@ -1,12 +1,9 @@
 using System;
-using System.Configuration;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Web.Http;
 using CogisoftConnector.Logic;
-using CogisoftConnector.Models;
 using CogisoftConnector.Models.EmploWebhookModels.RequestModels;
 using CogisoftConnector.Models.EmploWebhookModels.ResponseModels;
 using EmploApiSDK.Logger;
@@ -248,7 +245,7 @@ namespace CogisoftConnector.Controllers
                     "application/json")
             };
 
-            _logger.WriteLine($"Status check result: ERROR, response: {JsonConvert.SerializeObject(response)}");
+            _logger.WriteLine($"Status check result: ERROR, response: {JsonConvert.SerializeObject(response)}", LogLevelEnum.Error);
             return response;
         }
     }

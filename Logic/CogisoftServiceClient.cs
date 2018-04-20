@@ -45,7 +45,6 @@ namespace CogisoftConnector.Logic
             if (!bool.Parse(ConfigurationManager.AppSettings["ValidateCogisoftSslCertificate"]))
             {
                 //Tylko dla serwera testowego!
-                ServicePointManager.Expect100Continue = true;
                 ServicePointManager.DefaultConnectionLimit = 9999;
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12 | SecurityProtocolType.Ssl3;
 
