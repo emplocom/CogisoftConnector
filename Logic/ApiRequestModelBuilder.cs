@@ -8,9 +8,9 @@ namespace CogisoftConnector.Logic
     {
         private readonly CogisoftEmployeeImportConfiguration _cogisoftEmployeeImportMappingConfiguration;
 
-        public ApiRequestModelBuilder(ILogger logger, CogisoftEmployeeImportConfiguration configuration)
+        public ApiRequestModelBuilder(CogisoftEmployeeImportConfiguration configuration)
         {
-            _cogisoftEmployeeImportMappingConfiguration = configuration;new CogisoftEmployeeImportConfiguration(logger);
+            _cogisoftEmployeeImportMappingConfiguration = configuration;
         }
 
         public UserDataRow BuildUserDataRow(GetEmployeeDataResponseCogisoftModel.R row)
