@@ -3,6 +3,7 @@ using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
 using CogisoftConnector.Logic;
 using EmploApiSDK.Logger;
@@ -25,9 +26,9 @@ namespace CogisoftConnector.Controllers
         /// Should be run periodically by a scheduler.
         /// </summary>
         [HttpGet]
-        public HttpResponseMessage SynchronizeVacationDays()
+        public async Task<HttpResponseMessage> SynchronizeVacationDays()
         {
-            _cogisoftSyncVacationDataLogic.SyncAllVacationData();
+            await _cogisoftSyncVacationDataLogic.SyncAllVacationData();
 
             return new HttpResponseMessage(HttpStatusCode.OK);
         }
