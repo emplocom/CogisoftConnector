@@ -25,8 +25,16 @@ namespace CogisoftConnector.Logic
         {
             _logger = logger;
             _importLogic = new ImportLogic(logger);
-            _cogisoftEmployeeImportMappingConfiguration = new CogisoftEmployeeImportConfiguration(logger);
-            _apiRequestModelBuilder = new ApiRequestModelBuilder(logger, _cogisoftEmployeeImportMappingConfiguration);
+            try
+            {
+                _cogisoftEmployeeImportMappingConfiguration = new CogisoftEmployeeImportConfiguration(logger);
+            }
+            catch (EmploApiClientFatalException e)
+            {
+                _logger.WriteLine($"{ExceptionLoggingUtils.ExceptionAsString(e)}", LogLevelEnum.Error);
+                throw;
+            }
+            _apiRequestModelBuilder = new ApiRequestModelBuilder(_cogisoftEmployeeImportMappingConfiguration);
         }
 
         private async Task ImportEmployeeDataInternal(CogisoftServiceClient client)
@@ -63,7 +71,7 @@ namespace CogisoftConnector.Logic
 
             if (result == -1)
             {
-                throw new Exception("An error occurred during import, check import logs for details");
+                throw new Exception("An error has occurred during import");
             }
         }
 
@@ -78,7 +86,7 @@ namespace CogisoftConnector.Logic
             }
             catch (Exception e)
             {
-                _logger.WriteLine($"An unexpected error occurred, exception: {ExceptionLoggingUtils.ExceptionAsString(e)}", LogLevelEnum.Error);
+                _logger.WriteLine($"An unexpected error has occurred, exception: {ExceptionLoggingUtils.ExceptionAsString(e)}", LogLevelEnum.Error);
             }
         }
     }

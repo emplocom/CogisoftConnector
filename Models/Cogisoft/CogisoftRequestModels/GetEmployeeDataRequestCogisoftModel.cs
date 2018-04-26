@@ -54,7 +54,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
         public GetEmployeeDataRequestCogisoftModel(
             CogisoftEmployeeImportConfiguration cogisoftEmployeeImportMappingConfiguration)
         {
-            qp = new Qp(cogisoftEmployeeImportMappingConfiguration.PropertyMappings.Select(m => m.FileHeaderName).ToList());
+            qp = new Qp(cogisoftEmployeeImportMappingConfiguration.PropertyMappings.Select(m => m.ExternalPropertyName).ToList());
         }
 
         public Qp qp { get; set; }

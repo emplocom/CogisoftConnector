@@ -32,7 +32,7 @@ namespace CogisoftConnector.Logic
             _apiClient = new ApiClient(_logger, _apiConfiguration);
         }
 
-        private void SyncVacationDataRecursive(CogisoftServiceClient client, string externalVacationTypeIdentifier, int retryCounter = 0, List<string> employeeIds = null, bool withRepeatedFirstCogisoftQuery = false)
+        private async Task SyncVacationDataRecursive(CogisoftServiceClient client, string externalVacationTypeIdentifier, int retryCounter = 0, List<string> employeeIds = null, bool withRepeatedFirstCogisoftQuery = false)
         {
             if (employeeIds != null)
             {
@@ -83,9 +83,9 @@ namespace CogisoftConnector.Logic
                         });
                 }
 
-                var response = _apiClient
+                var response = await _apiClient
                     .SendPostAsync<ImportIntegratedVacationsBalanceDataResponseModel>(
-                        request, _apiConfiguration.ImportIntegratedVacationsBalanceDataUrl).Result;
+                        request, _apiConfiguration.ImportIntegratedVacationsBalanceDataUrl);
 
                 if (response.OperationStatus == ImportVacationDataStatusCode.Ok)
                 {
@@ -105,7 +105,7 @@ namespace CogisoftConnector.Logic
                 {
                     Thread.Sleep(int.Parse(ConfigurationManager.AppSettings["GetVacationDataRetryInterval_ms"]));
 
-                    SyncVacationDataRecursive(client, externalVacationTypeIdentifier, ++retryCounter, employeeVacationDataModels.Where(m => m.MissingData)
+                    await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, ++retryCounter, employeeVacationDataModels.Where(m => m.MissingData)
                         .Select(m => m.Result.ExternalEmployeeId).ToList());
                 }
                 else
@@ -116,13 +116,13 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        private void SyncVacationData(string externalVacationTypeIdentifier, List<string> employeeIds = null, bool withRepeatedFirstCogisoftQuery = false)
+        private async Task SyncVacationData(string externalVacationTypeIdentifier, List<string> employeeIds = null, bool withRepeatedFirstCogisoftQuery = false)
         {
             try
             {
                 using (var client = new CogisoftServiceClient(_logger))
                 {
-                    SyncVacationDataRecursive(client, externalVacationTypeIdentifier, 0, employeeIds, withRepeatedFirstCogisoftQuery);
+                    await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, 0, employeeIds, withRepeatedFirstCogisoftQuery);
                 }
             }
             catch (Exception e)
@@ -131,11 +131,11 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        private void SyncVacationDataForSingleEmployeeWithDelay(string externalVacationTypeIdentifier,
+        private async Task SyncVacationDataForSingleEmployeeWithDelay(string externalVacationTypeIdentifier,
             string employeeIdentifier)
         {
-            Thread.Sleep(300000);
-            SyncVacationData(externalVacationTypeIdentifier, new List<string>() {employeeIdentifier}, true);
+            Thread.Sleep(int.Parse(ConfigurationManager.AppSettings["EmployeeVacationBalanceSynchronizationDelay_ms"]));
+            await SyncVacationData(externalVacationTypeIdentifier, new List<string>() {employeeIdentifier}, true);
         }
 
         public void SyncVacationDataForSingleEmployee(string externalVacationTypeIdentifier, string employeeIdentifier)
@@ -145,9 +145,9 @@ namespace CogisoftConnector.Logic
             );
         }
 
-        public void SyncAllVacationData()
+        public async Task SyncAllVacationData()
         {
-            SyncVacationData(ConfigurationManager.AppSettings["DefaultVacationTypeIdForSynchronization"]);
+            await SyncVacationData(ConfigurationManager.AppSettings["DefaultVacationTypeIdForSynchronization"]);
         }
     }
 }
