@@ -83,19 +83,28 @@ namespace CogisoftConnector.Logic
                         });
                 }
 
-                var response = await _apiClient
-                    .SendPostAsync<ImportIntegratedVacationsBalanceDataResponseModel>(
-                        request, _apiConfiguration.ImportIntegratedVacationsBalanceDataUrl);
-
-                if (response.OperationStatus == ImportVacationDataStatusCode.Ok)
+                bool dryRun;
+                if (bool.TryParse(ConfigurationManager.AppSettings["DryRun"], out dryRun) && dryRun)
                 {
-                    _logger.WriteLine($"Employee vacation data synchronization succeeded for employee Ids: (retry counter: {retryCounter})");
-                    _logger.WriteLine(string.Join(", ", employeeVacationDataModels.Where(m => !m.MissingData).Select(m => m.Result.ExternalEmployeeId)));
+                    _logger.WriteLine("Importer is in DryRun mode, data retrieved from Cogisoft will be printed to log, but it won't be sent to emplo.");
+                    _logger.WriteLine(request);
                 }
                 else
                 {
-                    _logger.WriteLine("An error occurred during import. Error message:", LogLevelEnum.Error);
-                    _logger.WriteLine(response.ErrorMessage, LogLevelEnum.Error);
+                    var response = await _apiClient
+                        .SendPostAsync<ImportIntegratedVacationsBalanceDataResponseModel>(
+                            request, _apiConfiguration.ImportIntegratedVacationsBalanceDataUrl);
+
+                    if (response.OperationStatus == ImportVacationDataStatusCode.Ok)
+                    {
+                        _logger.WriteLine($"Employee vacation data synchronization succeeded for employee Ids: (retry counter: {retryCounter})");
+                        _logger.WriteLine(string.Join(", ", employeeVacationDataModels.Where(m => !m.MissingData).Select(m => m.Result.ExternalEmployeeId)));
+                    }
+                    else
+                    {
+                        _logger.WriteLine("An error occurred during import. Error message:", LogLevelEnum.Error);
+                        _logger.WriteLine(response.ErrorMessage, LogLevelEnum.Error);
+                    }
                 }
             }
 

@@ -8,6 +8,7 @@ using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Employees;
 using EmploApiSDK.Logger;
 using EmploApiSDK.Logic.EmployeeImport;
+using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
 {
@@ -67,11 +68,20 @@ namespace CogisoftConnector.Logic
                 cogisoftRequest.IncrementQueryIndex();
             } while (anyObjectsLeft);
 
-            var result = await _importLogic.ImportEmployees(importUsersRequestModel);
-
-            if (result == -1)
+            bool dryRun;
+            if (bool.TryParse(ConfigurationManager.AppSettings["DryRun"], out dryRun) && dryRun)
             {
-                throw new Exception("An error has occurred during import");
+                _logger.WriteLine("Importer is in DryRun mode, data retrieved from Cogisoft will be printed to log, but it won't be sent to emplo.");
+                var serializedData = JsonConvert.SerializeObject(importUsersRequestModel.Rows);
+                _logger.WriteLine(serializedData);
+            }
+            else
+            {
+                var result = await _importLogic.ImportEmployees(importUsersRequestModel);
+                if (result == -1)
+                {
+                    throw new Exception("An error has occurred during import");
+                }
             }
         }
 
