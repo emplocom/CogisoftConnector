@@ -40,6 +40,7 @@ namespace CogisoftConnector.Logic
             }
             else
             {
+                employeeIds = new List<string>();
                 _logger.WriteLine($"SyncVacationData started for all employees");
             }
             _logger.WriteLine($"SyncVacationData retry counter: {retryCounter}");
@@ -55,7 +56,7 @@ namespace CogisoftConnector.Logic
                     client.PerformRequestReceiveResponse<GetVacationDataRequestCogisoftModel,
                         VacationDataResponseCogisoftModel>(requestCogisoftRequest);
 
-                employeeVacationDataModels.AddRange(response.GetEmployeeCollection()
+                employeeVacationDataModels.AddRange(response.GetVacationDataCollection()
                     .Select(r => new IntegratedVacationsBalanceDtoWrapper(r, externalVacationTypeIdentifier)));
 
                 anyObjectsLeft = response.AnyRemainingObjectsLeft();
@@ -114,13 +115,22 @@ namespace CogisoftConnector.Logic
                 {
                     Thread.Sleep(int.Parse(ConfigurationManager.AppSettings["GetVacationDataRetryInterval_ms"]));
 
-                    await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, ++retryCounter, employeeVacationDataModels.Where(m => m.MissingData)
-                        .Select(m => m.Result.ExternalEmployeeId).ToList());
+                    retryCounter++;
+                    await employeeVacationDataModels.Where(m => m.MissingData)
+                        .Select(m => m.Result.ExternalEmployeeId).Chunk(1500).ToList().ForEachAsync(
+                            async employeeIdsChunk =>
+                                await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, retryCounter,
+                                    employeeIdsChunk.ToList()));
                 }
                 else
                 {
-                    _logger.WriteLine($"Maximum retry count ({ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]}) exceeded for employees:", LogLevelEnum.Error);
-                    _logger.WriteLine(string.Join(", ", employeeVacationDataModels.Where(m => m.MissingData).Select(m => m.Result.ExternalEmployeeId).ToList()), LogLevelEnum.Error);
+                    _logger.WriteLine(
+                        $"Maximum retry count ({ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]}) exceeded for employees:",
+                        LogLevelEnum.Error);
+                    _logger.WriteLine(
+                        string.Join(", ",
+                            employeeVacationDataModels.Where(m => m.MissingData)
+                                .Select(m => m.Result.ExternalEmployeeId).ToList()), LogLevelEnum.Error);
                 }
             }
         }
@@ -131,7 +141,19 @@ namespace CogisoftConnector.Logic
             {
                 using (var client = new CogisoftServiceClient(_logger))
                 {
-                    await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, 0, employeeIds, withRepeatedFirstCogisoftQuery);
+                    if (employeeIds == null || !employeeIds.Any())
+                    {
+                        await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, 0,
+                            null, withRepeatedFirstCogisoftQuery);
+                    }
+                    else
+                    {
+                        await employeeIds.Chunk(1500).ToList().ForEachAsync(async employeeIdsChunk =>
+                            await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, 0,
+                                employeeIdsChunk.ToList(), withRepeatedFirstCogisoftQuery));
+                    }
+
+                    
                 }
             }
             catch (Exception e)
@@ -154,9 +176,16 @@ namespace CogisoftConnector.Logic
             );
         }
 
-        public async Task SyncAllVacationData()
+        public async Task SyncVacationData(List<string> employeeIdentifiers = null)
         {
-            await SyncVacationData(ConfigurationManager.AppSettings["DefaultVacationTypeIdForSynchronization"]);
+            if (employeeIdentifiers == null || !employeeIdentifiers.Any())
+            {
+                await SyncVacationData(ConfigurationManager.AppSettings["DefaultVacationTypeIdForSynchronization"]);
+            }
+            else
+            {
+                await SyncVacationData(ConfigurationManager.AppSettings["DefaultVacationTypeIdForSynchronization"], employeeIdentifiers);
+            }
         }
     }
 }

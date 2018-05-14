@@ -119,6 +119,7 @@
     <Compile Include="Logic\CogisoftSyncVacationDataLogic.cs" />
     <Compile Include="Logic\ConfigurationTestLogic.cs" />
     <Compile Include="Logic\EmployeeImportLogic.cs" />
+    <Compile Include="Logic\EnumerableUtils.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\GetEmployeeDataRequestCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\TestConnectionRequestCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftResponseModels\GetEmployeeDataResponseCogisoftModel.cs" />

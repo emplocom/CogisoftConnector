@@ -12,7 +12,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
         //          "token": "xxx", 
         //          "q":{
         //              "tbl":"KADR:PRACOWNICY_DANE", 
-        //              "ss": [ "FKF_OSOB", "FLD__ID", "FLD_URLOP_POZ_D", "FLD_URLOP_POZ_H", "FLD_URLOP_ZAL_D", "FLD_URLOP_ZAL_H", "FLD_URLOP_NAZ_D" ],
+        //              "ss": [ "FLD__ID", "FLD_URLOP_POZ_D", "FLD_URLOP_POZ_H", "FLD_URLOP_ZAL_D", "FLD_URLOP_ZAL_H", "FLD_URLOP_NAZ_D" ],
         //              "p": { 
         //                  "s": 1 
         //                   } 
@@ -40,7 +40,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
         public class Q
         {
             public string tbl = "KADR:PRACOWNICY_DANE";
-            public string[] ss = new[] { "FLD__ID", "FKF_OSOB", "FLD_URLOP_POZ_D", "FLD_URLOP_POZ_H", "FLD_URLOP_ZAL_D", "FLD_URLOP_ZAL_H", "FLD_URLOP_NAZ_D" };
+            public string[] ss = new[] { "FLD__ID", "FLD_URLOP_POZ_D", "FLD_URLOP_POZ_H", "FLD_URLOP_ZAL_D", "FLD_URLOP_ZAL_H", "FLD_URLOP_NAZ_D" };
             public P p;
 
             public string fs;
@@ -51,7 +51,8 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
 
                 if (employeeIds != null && employeeIds.Any())
                 {
-                    this.fs = string.Join(" or ", employeeIds.Select(id => $"FKF_OSOB.FKF_OSOB == {id}"));
+                    this.fs =
+                        $"FLD__ID in [{string.Join(",", employeeIds)}]";
                 }
                 else
                 {

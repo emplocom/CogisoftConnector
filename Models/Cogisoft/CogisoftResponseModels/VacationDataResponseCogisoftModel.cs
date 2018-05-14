@@ -56,7 +56,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
         public string f { get; set; }
         public List<Qr> qr { get; set; }
 
-        public List<R> GetEmployeeCollection()
+        public List<R> GetVacationDataCollection()
         {
             return this.qr[0].p[0].r;
         }
