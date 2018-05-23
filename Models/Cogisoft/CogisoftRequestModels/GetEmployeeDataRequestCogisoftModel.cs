@@ -14,7 +14,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
         /// <summary>
         /// Page size
         /// </summary>
-        public int s = 1500;
+        public int s = int.Parse(ConfigurationManager.AppSettings["CogisoftQueryPageSize"]);
         /// <summary>
         /// Page index
         /// </summary>

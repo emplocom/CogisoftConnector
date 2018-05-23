@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.WebPages;
 using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.IntegratedVacations;
@@ -87,7 +88,8 @@ namespace CogisoftConnector.Logic
                 bool dryRun;
                 if (bool.TryParse(ConfigurationManager.AppSettings["DryRun"], out dryRun) && dryRun)
                 {
-                    _logger.WriteLine("Importer is in DryRun mode, data retrieved from Cogisoft will be printed to log, but it won't be sent to emplo.");
+                    _logger.WriteLine(
+                        "Importer is in DryRun mode, data retrieved from Cogisoft will be printed to log, but it won't be sent to emplo.");
                     _logger.WriteLine(request);
                 }
                 else
@@ -96,16 +98,12 @@ namespace CogisoftConnector.Logic
                         .SendPostAsync<ImportIntegratedVacationsBalanceDataResponseModel>(
                             request, _apiConfiguration.ImportIntegratedVacationsBalanceDataUrl);
 
-                    if (response.OperationStatus == ImportVacationDataStatusCode.Ok)
-                    {
-                        _logger.WriteLine($"Employee vacation data synchronization succeeded for employee Ids: (retry counter: {retryCounter})");
-                        _logger.WriteLine(string.Join(", ", employeeVacationDataModels.Where(m => !m.MissingData).Select(m => m.Result.ExternalEmployeeId)));
-                    }
-                    else
-                    {
-                        _logger.WriteLine("An error occurred during import. Error message:", LogLevelEnum.Error);
-                        _logger.WriteLine(response.ErrorMessage, LogLevelEnum.Error);
-                    }
+                    response.resultRows = response.resultRows.OrderBy(r => r.ExternalEmployeeId).ToList();
+
+                    response.resultRows.ForEach(r =>
+                        _logger.WriteLine(
+                            $"Employee Id: {r.ExternalEmployeeId}, Import result status: [{r.OperationStatus.ToString()}]{(r.Message.IsEmpty() ? string.Empty : $", Message: {r.Message}")}",
+                            MapImportStatusToLogLevel(r.OperationStatus)));
                 }
             }
 
@@ -117,7 +115,9 @@ namespace CogisoftConnector.Logic
 
                     retryCounter++;
                     await employeeVacationDataModels.Where(m => m.MissingData)
-                        .Select(m => m.Result.ExternalEmployeeId).Chunk(1500).ToList().ForEachAsync(
+                        .Select(m => m.Result.ExternalEmployeeId)
+                        .Chunk(int.Parse(ConfigurationManager.AppSettings["CogisoftQueryPageSize"]))
+                        .ToList().ForEachAsync(
                             async employeeIdsChunk =>
                                 await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, retryCounter,
                                     employeeIdsChunk.ToList()));
@@ -135,6 +135,19 @@ namespace CogisoftConnector.Logic
             }
         }
 
+        private LogLevelEnum MapImportStatusToLogLevel(ImportVacationDataStatusCode status)
+        {
+            switch (status)
+            {
+                case ImportVacationDataStatusCode.Warning:
+                    return LogLevelEnum.Warning;
+                case ImportVacationDataStatusCode.Error:
+                    return LogLevelEnum.Error;
+                default:
+                    return LogLevelEnum.Information;
+            }
+        }
+
         private async Task SyncVacationData(string externalVacationTypeIdentifier, List<string> employeeIds = null, bool withRepeatedFirstCogisoftQuery = false)
         {
             try
@@ -148,12 +161,14 @@ namespace CogisoftConnector.Logic
                     }
                     else
                     {
-                        await employeeIds.Chunk(1500).ToList().ForEachAsync(async employeeIdsChunk =>
-                            await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, 0,
-                                employeeIdsChunk.ToList(), withRepeatedFirstCogisoftQuery));
+                        await employeeIds
+                            .Chunk(int.Parse(ConfigurationManager.AppSettings["CogisoftQueryPageSize"]))
+                            .ToList().ForEachAsync(async employeeIdsChunk =>
+                                await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, 0,
+                                    employeeIdsChunk.ToList(), withRepeatedFirstCogisoftQuery));
                     }
 
-                    
+
                 }
             }
             catch (Exception e)
