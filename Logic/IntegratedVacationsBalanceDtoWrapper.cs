@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Web.WebPages;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.IntegratedVacations;
 
@@ -16,49 +18,46 @@ namespace CogisoftConnector.Logic
             Result.ExternalEmployeeId = employeeResponseCollection.sc[0].ToString();
             Result.ExternalVacationTypeId = externalVacationTypeId;
 
-            if (!decimal.TryParse(employeeResponseCollection.sc[1].ToString(), out Result.AvailableDays))
+            if (employeeResponseCollection.sc.Skip(1).Any(r => r == null || r.ToString().IsEmpty() || r.ToString().Contains("n")))
             {
                 MissingData = true;
                 return;
             }
 
-            if (employeeResponseCollection.sc[2].ToString().Contains("n"))
+            Result.AvailableDays =
+                ParseAndConvertDays(employeeResponseCollection.sc[1].ToString(), Result.ExternalEmployeeId);
+
+            Result.AvailableHours = ParseAndConvertHours(employeeResponseCollection.sc[2].ToString(), Result.ExternalEmployeeId);
+
+            Result.OutstandingDays =
+                ParseAndConvertDays(employeeResponseCollection.sc[3].ToString(), Result.ExternalEmployeeId);
+
+            Result.OutstandingHours = ParseAndConvertHours(employeeResponseCollection.sc[4].ToString(), Result.ExternalEmployeeId);
+
+            Result.OnDemandDays =
+                ParseAndConvertDays(employeeResponseCollection.sc[5].ToString(), Result.ExternalEmployeeId);
+        }
+
+        private decimal ParseAndConvertDays(string days, string externalEmployeeId)
+        {
+            //we can get days in the "24d 4:00" format - only the whole day part interests us
+            int indexOfD = days.IndexOf("d", StringComparison.Ordinal);
+            var onlyDaysString = indexOfD == -1 ? days : days.Substring(0, indexOfD);
+
+            decimal parsedDays;
+
+            if (!decimal.TryParse(onlyDaysString, out parsedDays))
             {
-                MissingData = true;
-                return;
-            }
-            else
-            {
-                Result.AvailableHours = ParseAndConvertHours(employeeResponseCollection.sc[2].ToString(), Result.ExternalEmployeeId);
+                throw new Exception($"Could not parse days. Days' string: {onlyDaysString}, full string: {days}, External employee Id: {externalEmployeeId}");
             }
 
-            if (!decimal.TryParse(employeeResponseCollection.sc[3].ToString(), out Result.OutstandingDays))
-            {
-                MissingData = true;
-                return;
-            }
-
-            if (employeeResponseCollection.sc[4].ToString().Contains("n"))
-            {
-                MissingData = true;
-                return;
-            }
-            else
-            {
-                Result.OutstandingHours = ParseAndConvertHours(employeeResponseCollection.sc[4].ToString(), Result.ExternalEmployeeId);
-            }
-
-            if (!decimal.TryParse(employeeResponseCollection.sc[5].ToString(), out Result.OnDemandDays))
-            {
-                MissingData = true;
-                return;
-            }
+            return parsedDays;
         }
 
         private decimal ParseAndConvertHours(string hours, string externalEmployeeId)
         {
-            var hourComponent = hours.Substring(0, hours.IndexOf(":"));
-            var minuteComponent = hours.Substring(hours.IndexOf(":") + 1);
+            var hourComponent = hours.Substring(0, hours.IndexOf(":", StringComparison.Ordinal));
+            var minuteComponent = hours.Substring(hours.IndexOf(":", StringComparison.Ordinal) + 1);
 
             decimal parsedHourComponent;
 
