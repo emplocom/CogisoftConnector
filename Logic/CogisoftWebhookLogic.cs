@@ -1,11 +1,7 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using CogisoftConnector.Models;
 using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
-using CogisoftConnector.Models.EmploWebhookModels.RequestModels;
+using EmploApiSDK.ApiModels.Vacations.IntegratedVacationWebhooks.RequestModels;
 using EmploApiSDK.Logger;
-using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
 {

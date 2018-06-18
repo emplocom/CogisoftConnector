@@ -17,9 +17,9 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        public static Task ForEachAsync<T>(this IEnumerable<T> enumerable, Func<T, Task> action)
+        public static List<T> AsList<T>(this T t)
         {
-            return Task.WhenAll(enumerable.Select(action));
+            return new List<T>() {t};
         }
     }
 }

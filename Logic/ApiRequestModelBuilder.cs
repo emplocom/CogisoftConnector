@@ -1,6 +1,5 @@
 ﻿using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Employees;
-using EmploApiSDK.Logger;
 
 namespace CogisoftConnector.Logic
 {

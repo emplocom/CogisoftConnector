@@ -4,8 +4,9 @@ using System.Net.Http;
 using System.Text;
 using System.Web.Http;
 using CogisoftConnector.Logic;
-using CogisoftConnector.Models.EmploWebhookModels.RequestModels;
-using CogisoftConnector.Models.EmploWebhookModels.ResponseModels;
+using EmploApiSDK.ApiModels.Vacations.IntegratedVacationValidation;
+using EmploApiSDK.ApiModels.Vacations.IntegratedVacationWebhooks.RequestModels;
+using EmploApiSDK.ApiModels.Vacations.IntegratedVacationWebhooks.ResponseModels;
 using EmploApiSDK.Logger;
 using Newtonsoft.Json;
 
@@ -18,6 +19,7 @@ namespace CogisoftConnector.Controllers
     {
         CogisoftWebhookLogic _cogisoftWebhookLogic;
         CogisoftSyncVacationDataLogic _cogisoftSyncVacationDataLogic;
+        CogisoftVacationValidationLogic _cogisoftVacationValidationLogic;
         ILogger _logger;
 
         public VacationRequestsApiController()
@@ -26,7 +28,7 @@ namespace CogisoftConnector.Controllers
 
             _cogisoftSyncVacationDataLogic = new CogisoftSyncVacationDataLogic(_logger);
             _cogisoftWebhookLogic = new CogisoftWebhookLogic(_logger);
-            
+            _cogisoftVacationValidationLogic = new CogisoftVacationValidationLogic(_logger, _cogisoftSyncVacationDataLogic);
         }
 
         /// <summary>
@@ -205,7 +207,7 @@ namespace CogisoftConnector.Controllers
 
                     if(hasManagedVacationDaysBalance)
                     {
-                        _cogisoftSyncVacationDataLogic.SyncVacationDataForSingleEmployee(externalVacationTypeIdentifier, externalEmployeeIdentifier);
+                        _cogisoftSyncVacationDataLogic.SyncVacationDataForSingleEmployee(externalEmployeeIdentifier);
                     }
                     
                     if (operationType == OperationType.Create)
@@ -227,6 +229,34 @@ namespace CogisoftConnector.Controllers
                         return new HttpResponseMessage(HttpStatusCode.OK);
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                throw new HttpResponseException(BuildErrorResponseFromException(e));
+            }
+        }
+
+        /// <summary>
+        /// Endpoint listening for vacation validation request from emplo
+        /// </summary>
+        [HttpPost]
+        public HttpResponseMessage ValidateVacationRequest([FromBody] VacationValidationRequestModel model)
+        {
+            _logger.WriteLine($"Webhook received: VacationCreated, {JsonConvert.SerializeObject(model)}");
+
+            try
+            {
+                var validationResult = _cogisoftVacationValidationLogic.ValidateVacationRequest(model);
+
+                var response = new HttpResponseMessage(HttpStatusCode.Created)
+                {
+                    Content = new StringContent(
+                        JsonConvert.SerializeObject(validationResult),
+                        Encoding.UTF8, "application/json")
+                };
+
+                _logger.WriteLine($"Vacation request validation response: {JsonConvert.SerializeObject(response)}");
+                return response;
             }
             catch (Exception e)
             {
