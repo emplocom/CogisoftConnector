@@ -37,24 +37,24 @@ namespace CogisoftConnector.Logic
 
                 var employeeVacationBalance =
                     _cogisoftSyncVacationDataLogic.GetVacationDataForSingleEmployee(emploRequest.ExternalEmployeeId);
-
-
-                var workDaysDuringVacationRequest = employeeCalendarResponse.GetWorkingDaysCount();
+                
                 var workHoursDuringVacationRequest = employeeCalendarResponse.GetWorkingHoursCount();
 
                 if (emploRequest.IsOnDemand)
                 {
+                    var workDaysDuringVacationRequest = employeeCalendarResponse.GetWorkingDaysCount();
+
                     response.RequestIsValid = Math.Floor(employeeVacationBalance.OnDemandDays) >= workDaysDuringVacationRequest;
 
-                    response.ValidationMessageCollection.Add($"Dostępne dni: {employeeVacationBalance.OnDemandDays} d, wniosek zużyłby: {workDaysDuringVacationRequest} d");
-                    response.ValidationMessageCollection.AddRange(employeeCalendarResponse.SerializeCalendarInformation());
+                    response.Message = $"Dostępne dni: {employeeVacationBalance.OnDemandDays} d, wniosek zużywa: {workDaysDuringVacationRequest} d";
+                    response.AdditionalMessagesCollection.AddRange(employeeCalendarResponse.SerializeCalendarInformation());
                 }
                 else
                 {
                     response.RequestIsValid = employeeVacationBalance.AvailableHours >= workHoursDuringVacationRequest;
 
-                    response.ValidationMessageCollection.Add($"Dostępne godziny: {employeeVacationBalance.AvailableHours} h, wniosek zużyłby: {workHoursDuringVacationRequest} h");
-                    response.ValidationMessageCollection.AddRange(employeeCalendarResponse.SerializeCalendarInformation());
+                    response.Message = $"Dostępne godziny: {employeeVacationBalance.AvailableHours} h, wniosek zużywa: {workHoursDuringVacationRequest} h";
+                    response.AdditionalMessagesCollection.AddRange(employeeCalendarResponse.SerializeCalendarInformation());
                 }
                 
                 return response;

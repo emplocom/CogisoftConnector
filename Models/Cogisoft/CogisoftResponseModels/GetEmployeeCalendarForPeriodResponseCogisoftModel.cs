@@ -38,8 +38,8 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
 
         public Calendar calendar { get; set; }
 
-        [JsonIgnore]
-        private Dictionary<string, string> freeDayTypesDict = new Dictionary<string, string>() { {"W5", "dzień wolny"}, {"WN", "niedziela"}, {"WŚ", "dzień świąteczny"} };
+        //[JsonIgnore]
+        //private Dictionary<string, string> freeDayTypesDict = new Dictionary<string, string>() { {"W5", "dzień wolny"}, {"WN", "niedziela"}, {"WŚ", string.Empty} };
 
         [JsonIgnore]
         private List<string> workingDayTypesCollection = new List<string>() { "W" };
@@ -72,13 +72,27 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
                 else
                 {
                     string vacationDayType;
-                    if (!freeDayTypesDict.TryGetValue(day.type, out vacationDayType))
+
+                    switch (day.type)
                     {
-                        vacationDayType = day.type;
+                        case "W5":
+                            vacationDayType = "Dzień wolny";
+                            break;
+                        case "WN":
+                            vacationDayType = "Niedziela";
+                            break;
+                        case "WŚ":
+                            vacationDayType = day.e != null && day.e.Any()
+                                ? $"{string.Join(",", day.e.Select(ee => $"{ee.name}"))}"
+                                : "WŚ";
+                            break;
+                        default:
+                            vacationDayType = day.type;
+                            break;
                     }
 
                     serializedInfo.Add(
-                        $"{day.date}: Dzień wolny, typ: {vacationDayType}{(day.e != null ? $", dod. inf.: {string.Join(",", day.e.Select(ee => $"{ee.type}, {ee.name}"))}" : string.Empty)}");
+                        $"{day.date}: {vacationDayType}");
                 }
             }
 

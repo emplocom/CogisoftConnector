@@ -14,19 +14,16 @@ using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
 {
-    internal class SyncParameters
+    internal class QueryParameters
     {
-        public List<string> EmployeeIdentifiers { get; set; }
         public bool SkipInitialRecalculation { get; set; }
         public int MaxRetryCount { get; set; }
         public int RetryInterval_ms { get; set; }
         public int CogisoftQueryPageSize { get; set; }
         public string DefaultExternalVacationTypeId { get; set; }
 
-        internal SyncParameters(List<string> employeeIdentifiers)
+        internal QueryParameters()
         {
-            EmployeeIdentifiers = employeeIdentifiers ?? new List<string>();
-
             SkipInitialRecalculation = false;
             MaxRetryCount = int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]);
             RetryInterval_ms = int.Parse(ConfigurationManager.AppSettings["GetVacationDataRetryInterval_ms"]);
@@ -56,7 +53,7 @@ namespace CogisoftConnector.Logic
 
         public IntegratedVacationsBalanceDto GetVacationDataForSingleEmployee(string employeeIdentifier)
         {
-            return GetVacationData(new SyncParameters(employeeIdentifier.AsList()) {SkipInitialRecalculation = true, RetryInterval_ms = 1000}).First().Result;
+            return GetVacationData(new QueryParameters() {SkipInitialRecalculation = true, RetryInterval_ms = 1000}, employeeIdentifier.AsList()).First().Result;
         }
 
         public void SyncVacationDataForSingleEmployee(string employeeIdentifier)
@@ -68,42 +65,44 @@ namespace CogisoftConnector.Logic
 
         public async Task SyncVacationData(List<string> employeeIdentifiers = null)
         {
-            var vacationData = GetVacationData(new SyncParameters(employeeIdentifiers));
+            var vacationData = GetVacationData(new QueryParameters(), employeeIdentifiers);
             foreach (var dataChunk in vacationData.Chunk(100).ToList())
             {
                 await Import(dataChunk.ToList());
             }
         }
 
-        private List<IntegratedVacationsBalanceDtoWrapper> GetVacationData(SyncParameters syncParameters)
+        private List<IntegratedVacationsBalanceDtoWrapper> GetVacationData(QueryParameters queryParameters, List<string> employeeIdentifiers)
         {
             using (var client = new CogisoftServiceClient(_logger))
             {
-                return GetVacationDataRecursive(syncParameters, client);
+                return GetVacationDataRecursive(queryParameters, client, employeeIdentifiers);
             }
         }
 
-        private List<IntegratedVacationsBalanceDtoWrapper> GetVacationDataRecursive(SyncParameters syncParameters, CogisoftServiceClient client, int retryCounter = 0)
+        private List<IntegratedVacationsBalanceDtoWrapper> GetVacationDataRecursive(QueryParameters queryParameters, CogisoftServiceClient client, List<string> employeeIdentifiers, int retryCounter = 0)
         {
-            if (syncParameters.EmployeeIdentifiers.Any())
+            if (employeeIdentifiers != null && employeeIdentifiers.Any())
             {
-                _logger.WriteLine($"SyncVacationData started for employees: {string.Join(", ", syncParameters.EmployeeIdentifiers)}");
+                _logger.WriteLine($"GetVacationData started for employees: {string.Join(", ", employeeIdentifiers)}");
             }
             else
             {
-                _logger.WriteLine($"SyncVacationData started for all employees");
+                employeeIdentifiers = new List<string>();
+                _logger.WriteLine($"GetVacationData started for all employees");
             }
-            _logger.WriteLine($"SyncVacationData retry counter: {retryCounter}");
+            _logger.WriteLine($"GetVacationData retry counter: {retryCounter}");
 
 
-            GetVacationDataRequestCogisoftModel requestCogisoftRequest = new GetVacationDataRequestCogisoftModel(syncParameters.EmployeeIdentifiers);
+            GetVacationDataRequestCogisoftModel requestCogisoftRequest = new GetVacationDataRequestCogisoftModel(employeeIdentifiers);
             List<IntegratedVacationsBalanceDtoWrapper> modelsQueryResult = new List<IntegratedVacationsBalanceDtoWrapper>();
             List<IntegratedVacationsBalanceDtoWrapper> modelsFinalCollection = new List<IntegratedVacationsBalanceDtoWrapper>();
             bool anyObjectsLeft;
 
 
-            if (retryCounter == 0 && !syncParameters.SkipInitialRecalculation)
+            if (retryCounter == 0 && !queryParameters.SkipInitialRecalculation)
             {
+                //The first request might provide us with outdated data while triggering data recalculation in Cogisoft
                 _logger.WriteLine(
                     $"Triggering data recalculation in Cogisoft system with a fire-and-forget request.");
 
@@ -119,22 +118,22 @@ namespace CogisoftConnector.Logic
                 } while (anyObjectsLeft);
 
                 _logger.WriteLine(
-                    $"Cogisoft query for recalculated data will be performed in {GetRetryInterval(syncParameters) / 1000} seconds.");
-                //The first request might provide us with outdated data while triggering data recalculation in Cogisoft
-                Thread.Sleep(GetRetryInterval(syncParameters));
+                    $"Cogisoft query for recalculated data will be performed in {GetRetryInterval(queryParameters, employeeIdentifiers) / 1000} seconds.");
+
+                requestCogisoftRequest.ResetQueryIndex();
+                
+                Thread.Sleep(GetRetryInterval(queryParameters, employeeIdentifiers));
             }
 
 
             do
             {
-                requestCogisoftRequest.ResetQueryIndex();
-
                 var response =
                     client.PerformRequestReceiveResponse<GetVacationDataRequestCogisoftModel,
                         VacationDataResponseCogisoftModel>(requestCogisoftRequest);
 
                 modelsQueryResult.AddRange(response.GetVacationDataCollection()
-                    .Select(r => new IntegratedVacationsBalanceDtoWrapper(r, syncParameters.DefaultExternalVacationTypeId)));
+                    .Select(r => new IntegratedVacationsBalanceDtoWrapper(r, queryParameters.DefaultExternalVacationTypeId)));
 
                 anyObjectsLeft = response.AnyRemainingObjectsLeft();
 
@@ -148,19 +147,19 @@ namespace CogisoftConnector.Logic
             var modelsWithMissingData = modelsQueryResult.Where(m => m.MissingData).ToList();
             if (modelsWithMissingData.Any())
             {
-                if (retryCounter < syncParameters.MaxRetryCount)
+                if (retryCounter < queryParameters.MaxRetryCount)
                 {
-                    Thread.Sleep(GetRetryInterval(syncParameters));
+                    Thread.Sleep(GetRetryInterval(queryParameters, employeeIdentifiers));
 
                     retryCounter++;
-                    syncParameters.EmployeeIdentifiers = modelsWithMissingData
+                    employeeIdentifiers = modelsWithMissingData
                         .Select(m => m.Result.ExternalEmployeeId).ToList();
-                    modelsFinalCollection.AddRange(GetVacationDataRecursive(syncParameters, client, retryCounter));
+                    modelsFinalCollection.AddRange(GetVacationDataRecursive(queryParameters, client, employeeIdentifiers, retryCounter));
                 }
                 else
                 {
                     _logger.WriteLine(
-                        $"Maximum retry count ({syncParameters.MaxRetryCount}) exceeded for employees:",
+                        $"Maximum retry count ({queryParameters.MaxRetryCount}) exceeded for employees:",
                         LogLevelEnum.Error);
                     _logger.WriteLine(
                         string.Join(", ",
@@ -217,15 +216,15 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        private int GetRetryInterval(SyncParameters syncParameters)
+        private int GetRetryInterval(QueryParameters queryParameters, List<string> employeeIdentifiers)
         {
-            int employeeCount = syncParameters.EmployeeIdentifiers.Count;
-            if (!syncParameters.EmployeeIdentifiers.Any())
+            int employeeCount = employeeIdentifiers.Count;
+            if (!employeeIdentifiers.Any())
             {
-                employeeCount = syncParameters.CogisoftQueryPageSize;
+                employeeCount = queryParameters.CogisoftQueryPageSize;
             }
 
-            return syncParameters.RetryInterval_ms + 500 * employeeCount;
+            return queryParameters.RetryInterval_ms + 500 * employeeCount;
         }
     }
 }
