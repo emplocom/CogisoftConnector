@@ -39,7 +39,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
         public Calendar calendar { get; set; }
 
         [JsonIgnore]
-        private List<string> freeDayTypesCollection = new List<string>() {"W5","WN", "WŚ"};
+        private Dictionary<string, string> freeDayTypesDict = new Dictionary<string, string>() { {"W5", "dzień wolny"}, {"WN", "niedziela"}, {"WŚ", "dzień świąteczny"} };
 
         [JsonIgnore]
         private List<string> workingDayTypesCollection = new List<string>() { "W" };
@@ -53,9 +53,9 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
         {
             var shifts = calendar.d
                 .Where(day => workingDayTypesCollection.Contains(day.type))
-                .SelectMany(day => day.e.Where(ee => ee.type.Equals("shift")));
+                .SelectMany(day => day.e);
 
-            return Convert.ToDecimal(shifts.Sum(e => (DateTime.Parse(e.to) - DateTime.Parse(e.from)).TotalHours));
+            return Convert.ToDecimal(shifts.Sum(e => (TimeSpan.Parse(e.to) - TimeSpan.Parse(e.from)).TotalHours));
         }
 
         public List<string> SerializeCalendarInformation()
@@ -66,11 +66,19 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
             {
                 if (workingDayTypesCollection.Contains(day.type))
                 {
-                    serializedInfo.Add($"{day.date}: Dzień pracujący, godziny: {string.Join(",", day.e.Where(ee => ee.type.Equals("shift")).Select(ee => $"{ee.from} - {ee.to}"))}");
+                    serializedInfo.Add(
+                        $"{day.date}: Dzień pracujący, godziny: {string.Join(",", day.e.Select(ee => $"{ee.from} - {ee.to}"))}");
                 }
                 else
                 {
-                    serializedInfo.Add($"{day.date}: Dzień wolny, typ: {day.type}, dod. inf.: {string.Join(",", day.e.Select(ee => $"{ee.type}, {ee.name}"))}");
+                    string vacationDayType;
+                    if (!freeDayTypesDict.TryGetValue(day.type, out vacationDayType))
+                    {
+                        vacationDayType = day.type;
+                    }
+
+                    serializedInfo.Add(
+                        $"{day.date}: Dzień wolny, typ: {vacationDayType}{(day.e != null ? $", dod. inf.: {string.Join(",", day.e.Select(ee => $"{ee.type}, {ee.name}"))}" : string.Empty)}");
                 }
             }
 

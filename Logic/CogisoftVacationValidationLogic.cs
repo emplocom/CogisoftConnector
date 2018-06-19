@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using CogisoftConnector.Models.Cogisoft;
-using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Vacations.IntegratedVacationValidation;
 using EmploApiSDK.Logger;
+using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
 {
@@ -29,67 +26,35 @@ namespace CogisoftConnector.Logic
             {
                 GetEmployeeCalendarForPeriodRequestCogisoftModel employeeCalendarRequest = new GetEmployeeCalendarForPeriodRequestCogisoftModel(emploRequest.Since, emploRequest.Until, emploRequest.ExternalEmployeeId);
 
+                //var employeeCalendarResponse =
+                //    client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
+                //        GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
+
                 var employeeCalendarResponse =
-                    client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
-                        GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
+                    JsonConvert.DeserializeObject<GetEmployeeCalendarForPeriodResponseCogisoftModel>(@"
+{ ""calendar"": { ""d"":[ { ""date"":""2018-01-01"", ""type"":""W"", ""e"":[ { ""type"":""shift"", ""id"":""1"", ""from"":""08:00"", ""to"":""16:00"" } ]}, { ""date"":""2018-01-02"", ""type"":""W5"" }, { ""date"":""2018-01-03"", ""type"":""WN"", ""e"":[ { ""type"":""holiday"", ""name"":""Śledzik"" } ] } ], ""m"":[ {""nr"":""1"", ""balance"":""5""} ] } }
+");
 
                 var employeeVacationBalance =
                     _cogisoftSyncVacationDataLogic.GetVacationDataForSingleEmployee(emploRequest.ExternalEmployeeId);
 
-                //var workDaysDuringVacationRequest = employeeCalendarResponse.GetWorkingDaysCount();
-
-                //if (emploRequest.IsOnDemand)
-                //{
-                //    if (employeeVacationBalance.OnDemandDays >= workDaysDuringVacationRequest)
-                //    {
-                //        response.RequestIsValid = true;
-                //    }
-
-                //    response.RequestIsValid = false;
-                //}
-                //else
-                //{
-                //    if (workDaysDuringVacationRequest <= Math.Floor(employeeVacationBalance.AvailableDays))
-                //    {
-                //        response.RequestIsValid = true;
-                //    }
-                //    else if (employeeVacationBalance.AvailableDays == 0 && employeeVacationBalance.AvailableHours > 0 && workDaysDuringVacationRequest == 1)
-                //    {
-                //        //TODO: shift validation...?
-                //        response.RequestIsValid = false;
-                //    }
-
-                //    response.RequestIsValid = false;
-                //}
 
                 var workDaysDuringVacationRequest = employeeCalendarResponse.GetWorkingDaysCount();
                 var workHoursDuringVacationRequest = employeeCalendarResponse.GetWorkingHoursCount();
 
                 if (emploRequest.IsOnDemand)
                 {
-                    if (Math.Floor(employeeVacationBalance.OnDemandDays) >= workDaysDuringVacationRequest)
-                    {
-                        response.RequestIsValid = true;
-                    }
-                    else
-                    {
-                        response.RequestIsValid = false;
-                        response.ValidationMessageCollection.Add($"Dostępne dni: {employeeVacationBalance.OnDemandDays} d, wniosek zużyłby: {workDaysDuringVacationRequest} d");
-                        response.ValidationMessageCollection.AddRange(employeeCalendarResponse.SerializeCalendarInformation());
-                    }
+                    response.RequestIsValid = Math.Floor(employeeVacationBalance.OnDemandDays) >= workDaysDuringVacationRequest;
+
+                    response.ValidationMessageCollection.Add($"Dostępne dni: {employeeVacationBalance.OnDemandDays} d, wniosek zużyłby: {workDaysDuringVacationRequest} d");
+                    response.ValidationMessageCollection.AddRange(employeeCalendarResponse.SerializeCalendarInformation());
                 }
                 else
                 {
-                    if (employeeVacationBalance.AvailableHours >= workHoursDuringVacationRequest)
-                    {
-                        response.RequestIsValid = true;
-                    }
-                    else
-                    {
-                        response.RequestIsValid = false;
-                        response.ValidationMessageCollection.Add($"Dostępne godziny: {employeeVacationBalance.AvailableHours} h, wniosek zużyłby: {workHoursDuringVacationRequest} h");
-                        response.ValidationMessageCollection.AddRange(employeeCalendarResponse.SerializeCalendarInformation());
-                    }
+                    response.RequestIsValid = employeeVacationBalance.AvailableHours >= workHoursDuringVacationRequest;
+
+                    response.ValidationMessageCollection.Add($"Dostępne godziny: {employeeVacationBalance.AvailableHours} h, wniosek zużyłby: {workHoursDuringVacationRequest} h");
+                    response.ValidationMessageCollection.AddRange(employeeCalendarResponse.SerializeCalendarInformation());
                 }
                 
                 return response;

@@ -242,13 +242,13 @@ namespace CogisoftConnector.Controllers
         [HttpPost]
         public HttpResponseMessage ValidateVacationRequest([FromBody] VacationValidationRequestModel model)
         {
-            _logger.WriteLine($"Webhook received: VacationCreated, {JsonConvert.SerializeObject(model)}");
+            _logger.WriteLine($"Request received: ValidateVacationRequest, {JsonConvert.SerializeObject(model)}");
 
             try
             {
                 var validationResult = _cogisoftVacationValidationLogic.ValidateVacationRequest(model);
 
-                var response = new HttpResponseMessage(HttpStatusCode.Created)
+                var response = new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(
                         JsonConvert.SerializeObject(validationResult),
