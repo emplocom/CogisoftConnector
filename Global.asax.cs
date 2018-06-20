@@ -1,5 +1,5 @@
-using System.Web.Http;
 using System.Web.Routing;
+using GlobalConfiguration = System.Web.Http.GlobalConfiguration;
 
 namespace CogisoftConnector
 {

@@ -22,13 +22,16 @@ namespace CogisoftConnector.Controllers
         CogisoftVacationValidationLogic _cogisoftVacationValidationLogic;
         ILogger _logger;
 
-        public VacationRequestsApiController()
+        public VacationRequestsApiController(CogisoftWebhookLogic cogisoftWebhookLogic,
+            CogisoftSyncVacationDataLogic cogisoftSyncVacationData,
+            CogisoftVacationValidationLogic cogisoftVacationValidationLogic, ILogger logger)
         {
             _logger = LoggerFactory.CreateLogger(null);
 
-            _cogisoftSyncVacationDataLogic = new CogisoftSyncVacationDataLogic(_logger);
-            _cogisoftWebhookLogic = new CogisoftWebhookLogic(_logger);
-            _cogisoftVacationValidationLogic = new CogisoftVacationValidationLogic(_logger, _cogisoftSyncVacationDataLogic);
+            _cogisoftWebhookLogic = cogisoftWebhookLogic;
+            _cogisoftSyncVacationDataLogic = cogisoftSyncVacationData;
+            _cogisoftVacationValidationLogic = cogisoftVacationValidationLogic;
+            _logger = logger;
         }
 
         /// <summary>

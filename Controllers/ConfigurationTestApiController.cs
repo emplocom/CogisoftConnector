@@ -12,10 +12,9 @@ namespace CogisoftConnector.Controllers
     {
         private readonly ConfigurationTestLogic _configurationTestLogic;
 
-        public ConfigurationTestApiController()
+        public ConfigurationTestApiController(ConfigurationTestLogic configurationTestLogic)
         {
-            ILogger logger = LoggerFactory.CreateLogger(null);
-            _configurationTestLogic = new ConfigurationTestLogic(logger);
+            _configurationTestLogic = configurationTestLogic;
         }
 
         /// <summary>

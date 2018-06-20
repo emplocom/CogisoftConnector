@@ -10,6 +10,7 @@ using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Vacations.IntegratedVacationBalances;
 using EmploApiSDK.Client;
 using EmploApiSDK.Logger;
+using Hangfire;
 using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
@@ -58,9 +59,10 @@ namespace CogisoftConnector.Logic
 
         public void SyncVacationDataForSingleEmployee(string employeeIdentifier)
         {
-            Task.Run(() =>
-                SyncVacationData(employeeIdentifier.AsList())
-            );
+            _logger.WriteLine($"Vacation data synchronization for employee {employeeIdentifier} will be performed in 5 minutes");
+            var jobId = BackgroundJob.Schedule(
+                () => SyncVacationData(employeeIdentifier.AsList()),
+                TimeSpan.FromMilliseconds(int.Parse(ConfigurationManager.AppSettings["EmployeeVacationBalanceSynchronizationDelay_ms"])));
         }
 
         public async Task SyncVacationData(List<string> employeeIdentifiers = null)
@@ -104,7 +106,7 @@ namespace CogisoftConnector.Logic
             {
                 //The first request might provide us with outdated data while triggering data recalculation in Cogisoft
                 _logger.WriteLine(
-                    $"Triggering data recalculation in Cogisoft system with a fire-and-forget request.");
+                    $"Triggering data recalculation in Cogisoft system with a fire-and-forget request");
 
                 do
                 {
@@ -118,7 +120,7 @@ namespace CogisoftConnector.Logic
                 } while (anyObjectsLeft);
 
                 _logger.WriteLine(
-                    $"Cogisoft query for recalculated data will be performed in {GetRetryInterval(queryParameters, employeeIdentifiers) / 1000} seconds.");
+                    $"Cogisoft query for recalculated data will be performed in {GetRetryInterval(queryParameters, employeeIdentifiers) / 1000} seconds");
 
                 requestCogisoftRequest.ResetQueryIndex();
                 
@@ -173,7 +175,7 @@ namespace CogisoftConnector.Logic
             return modelsFinalCollection;
         }
 
-        private async Task Import(List<IntegratedVacationsBalanceDtoWrapper> employeeVacationDataModels)
+        public async Task Import(List<IntegratedVacationsBalanceDtoWrapper> employeeVacationDataModels)
         {
             var request = JsonConvert.SerializeObject(
                 new ImportIntegratedVacationsBalanceDataRequestModel
@@ -185,7 +187,7 @@ namespace CogisoftConnector.Logic
             if (bool.TryParse(ConfigurationManager.AppSettings["DryRun"], out dryRun) && dryRun)
             {
                 _logger.WriteLine(
-                    "Importer is in DryRun mode, data retrieved from Cogisoft will be printed to log, but it won't be sent to emplo.");
+                    "Importer is in DryRun mode, data retrieved from Cogisoft will be printed to log, but it won't be sent to emplo");
                 _logger.WriteLine(request);
             }
             else

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -6,6 +7,7 @@ using System.Web.Http;
 using System.Web.WebPages;
 using CogisoftConnector.Logic;
 using EmploApiSDK.Logger;
+using Hangfire;
 
 namespace CogisoftConnector.Controllers
 {
@@ -13,10 +15,9 @@ namespace CogisoftConnector.Controllers
     {
         CogisoftSyncVacationDataLogic _cogisoftSyncVacationDataLogic;
 
-        public VacationBalanceApiController()
+        public VacationBalanceApiController(CogisoftSyncVacationDataLogic cogisoftSyncVacationDataLogic)
         {
-            ILogger logger = LoggerFactory.CreateLogger(null);
-            _cogisoftSyncVacationDataLogic = new CogisoftSyncVacationDataLogic(logger);
+            _cogisoftSyncVacationDataLogic = cogisoftSyncVacationDataLogic;
         }
 
         /// <summary>
@@ -25,15 +26,17 @@ namespace CogisoftConnector.Controllers
         /// Should be run periodically by a scheduler.
         /// </summary>
         [HttpGet]
-        public async Task<HttpResponseMessage> SynchronizeVacationDays([FromUri] string listOfIds = "")
+        public HttpResponseMessage SynchronizeVacationDays([FromUri] string listOfIds = "")
         {
             if (listOfIds.IsEmpty())
             {
-                await _cogisoftSyncVacationDataLogic.SyncVacationData();
+                var jobId = BackgroundJob.Enqueue(
+                    () => _cogisoftSyncVacationDataLogic.SyncVacationData(null));
             }
             else
             {
-                await _cogisoftSyncVacationDataLogic.SyncVacationData(listOfIds.Split(',').ToList());
+                var jobId = BackgroundJob.Enqueue(
+                    () => _cogisoftSyncVacationDataLogic.SyncVacationData(listOfIds.Split(',').ToList()));
             }
 
             return new HttpResponseMessage(HttpStatusCode.OK);
