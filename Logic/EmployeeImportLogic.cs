@@ -38,11 +38,19 @@ namespace CogisoftConnector.Logic
             _apiRequestModelBuilder = new ApiRequestModelBuilder(_cogisoftEmployeeImportMappingConfiguration);
         }
 
-        private async Task ImportEmployeeDataInternal(CogisoftServiceClient client)
+        private async Task ImportEmployeeDataInternal(CogisoftServiceClient client, List<string> employeeIdsToImport = null)
         {
-            _logger.WriteLine($"Employee import started");
+            if (employeeIdsToImport == null)
+            {
+                employeeIdsToImport = new List<string>();
+                _logger.WriteLine($"Employee import started");
+            }
+            else
+            {
+                _logger.WriteLine($"Employee import started for employees {string.Join(",", employeeIdsToImport)}");
+            }
 
-            GetEmployeeDataRequestCogisoftModel cogisoftRequest = new GetEmployeeDataRequestCogisoftModel(_cogisoftEmployeeImportMappingConfiguration);
+            GetEmployeeDataRequestCogisoftModel cogisoftRequest = new GetEmployeeDataRequestCogisoftModel(_cogisoftEmployeeImportMappingConfiguration, employeeIdsToImport);
 
             var importMode = ConfigurationManager.AppSettings["ImportMode"];
             var requireRegistrationForNewEmployees = ConfigurationManager.AppSettings["RequireRegistrationForNewEmployees"];
@@ -85,13 +93,13 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        public async Task ImportEmployeeData()
+        public async Task ImportEmployeeData(List<string> employeeIdsToImport = null)
         {
             try
             {
                 using (var client = new CogisoftServiceClient(_logger))
                 {
-                    await ImportEmployeeDataInternal(client);
+                    await ImportEmployeeDataInternal(client, employeeIdsToImport);
                 }
             }
             catch (Exception e)

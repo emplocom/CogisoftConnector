@@ -27,22 +27,27 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
 
     public class Q
     {
-        public Q(List<string> selectProperties)
+        public Q(List<string> selectProperties, List<string> employeeIdsToImport)
         {
             ss = selectProperties;
             p = new P();
+            if (employeeIdsToImport.Any())
+            {
+                fs = $"FKF_OSOB.FKF_OSOB.FKF_WIZYTOWKA in [{string.Join(",", employeeIdsToImport)}]";
+            }
         }
 
         public string tbl { get; set; } = "KADR:PRACOWNICY";
         public List<string> ss { get; set; }
+        public string fs { get; set; }
         public P p { get; set; }
     }
 
     public class Qp
     {
-        public Qp(List<string> selectProperties)
+        public Qp(List<string> selectProperties, List<string> employeeIdsToImport)
         {
-            q = new Q(selectProperties);
+            q = new Q(selectProperties, employeeIdsToImport);
         }
 
         public string token { get; set; }
@@ -52,9 +57,9 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
     public class GetEmployeeDataRequestCogisoftModel : IRequestCogisoftModel
     {
         public GetEmployeeDataRequestCogisoftModel(
-            CogisoftEmployeeImportConfiguration cogisoftEmployeeImportMappingConfiguration)
+            CogisoftEmployeeImportConfiguration cogisoftEmployeeImportMappingConfiguration, List<string> employeeIdsToImport)
         {
-            qp = new Qp(cogisoftEmployeeImportMappingConfiguration.PropertyMappings.Select(m => m.ExternalPropertyName).ToList());
+            qp = new Qp(cogisoftEmployeeImportMappingConfiguration.PropertyMappings.Select(m => m.ExternalPropertyName).ToList(), employeeIdsToImport);
         }
 
         public Qp qp { get; set; }

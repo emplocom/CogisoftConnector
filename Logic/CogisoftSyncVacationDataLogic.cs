@@ -120,11 +120,11 @@ namespace CogisoftConnector.Logic
                 } while (anyObjectsLeft);
 
                 _logger.WriteLine(
-                    $"Cogisoft query for recalculated data will be performed in {GetRetryInterval(queryParameters, employeeIdentifiers) / 1000} seconds");
+                    $"Cogisoft query for recalculated data will be performed in {GetRetryInterval(queryParameters, employeeIdentifiers.Count) / 1000} seconds");
 
                 requestCogisoftRequest.ResetQueryIndex();
                 
-                Thread.Sleep(GetRetryInterval(queryParameters, employeeIdentifiers));
+                Thread.Sleep(GetRetryInterval(queryParameters, employeeIdentifiers.Count));
             }
 
 
@@ -151,12 +151,14 @@ namespace CogisoftConnector.Logic
             {
                 if (retryCounter < queryParameters.MaxRetryCount)
                 {
-                    Thread.Sleep(GetRetryInterval(queryParameters, employeeIdentifiers));
+                    _logger.WriteLine(
+                        $"Cogisoft query for missing data will be performed in {GetRetryInterval(queryParameters, modelsWithMissingData.Count) / 1000} seconds");
+
+                    Thread.Sleep(GetRetryInterval(queryParameters, modelsWithMissingData.Count));
 
                     retryCounter++;
-                    employeeIdentifiers = modelsWithMissingData
-                        .Select(m => m.Result.ExternalEmployeeId).ToList();
-                    modelsFinalCollection.AddRange(GetVacationDataRecursive(queryParameters, client, employeeIdentifiers, retryCounter));
+                    modelsFinalCollection.AddRange(GetVacationDataRecursive(queryParameters, client, modelsWithMissingData
+                        .Select(m => m.Result.ExternalEmployeeId).ToList(), retryCounter));
                 }
                 else
                 {
@@ -218,12 +220,16 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        private int GetRetryInterval(QueryParameters queryParameters, List<string> employeeIdentifiers)
+        private int GetRetryInterval(QueryParameters queryParameters, int? employeesCount = null)
         {
-            int employeeCount = employeeIdentifiers.Count;
-            if (!employeeIdentifiers.Any())
+            int employeeCount = 0;
+            if (!employeesCount.HasValue)
             {
                 employeeCount = queryParameters.CogisoftQueryPageSize;
+            }
+            else
+            {
+                employeeCount = employeesCount.Value;
             }
 
             return queryParameters.RetryInterval_ms + 500 * employeeCount;
