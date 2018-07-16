@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using CogisoftConnector.Models.Cogisoft;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Vacations.IntegratedVacationValidation;
@@ -24,41 +25,63 @@ namespace CogisoftConnector.Logic
 
             using (var client = new CogisoftServiceClient(_logger))
             {
-                GetEmployeeCalendarForPeriodRequestCogisoftModel employeeCalendarRequest = new GetEmployeeCalendarForPeriodRequestCogisoftModel(emploRequest.Since, emploRequest.Until, emploRequest.ExternalEmployeeId);
 
-                //var employeeCalendarResponse =
-                //    client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
-                //        GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
-
-                var employeeCalendarResponse =
-                    JsonConvert.DeserializeObject<GetEmployeeCalendarForPeriodResponseCogisoftModel>(@"
-{ ""calendar"": { ""d"":[ { ""date"":""2018-01-01"", ""type"":""W"", ""e"":[ { ""type"":""shift"", ""id"":""1"", ""from"":""08:00"", ""to"":""16:00"" } ]}, { ""date"":""2018-01-02"", ""type"":""W5"" }, { ""date"":""2018-01-03"", ""type"":""WN"", ""e"":[ { ""type"":""holiday"", ""name"":""Śledzik"" } ] } ], ""m"":[ {""nr"":""1"", ""balance"":""5""} ] } }
-");
+                var employeeCalendar = GetEmployeeCalendar(emploRequest.Since, emploRequest.Until,
+                    emploRequest.ExternalEmployeeId, client);
 
                 var employeeVacationBalance =
                     _cogisoftSyncVacationDataLogic.GetVacationDataForSingleEmployee(emploRequest.ExternalEmployeeId);
                 
-                var workHoursDuringVacationRequest = employeeCalendarResponse.GetWorkingHoursCount();
+                var workHoursDuringVacationRequest = employeeCalendar.GetWorkingHoursCount();
 
                 if (emploRequest.IsOnDemand)
                 {
-                    var workDaysDuringVacationRequest = employeeCalendarResponse.GetWorkingDaysCount();
+                    var workDaysDuringVacationRequest = employeeCalendar.GetWorkingDaysCount();
 
-                    response.RequestIsValid = Math.Floor(employeeVacationBalance.OnDemandDays) >= workDaysDuringVacationRequest;
+                    response.RequestIsValid =
+                        Math.Floor(employeeVacationBalance.OnDemandDays) >= workDaysDuringVacationRequest;
+                    response.RequestIsValid = response.RequestIsValid =
+                        employeeVacationBalance.AvailableHours >= workHoursDuringVacationRequest;
 
-                    response.Message = $"Dostępne dni: {employeeVacationBalance.OnDemandDays} d, wniosek zużywa: {workDaysDuringVacationRequest} d";
-                    response.AdditionalMessagesCollection.AddRange(employeeCalendarResponse.SerializeCalendarInformation());
+                    response.RequestIsValid = true;
+                    response.Message =
+                        $"Dostępne dni na żądanie: {employeeVacationBalance.OnDemandDays} d, dostępne godziny: {employeeVacationBalance.AvailableHours}, wniosek zużywa: {workDaysDuringVacationRequest} d";
+                    response.AdditionalMessagesCollection.AddRange(
+                        employeeCalendar.SerializeCalendarInformation());
+
                 }
                 else
                 {
                     response.RequestIsValid = employeeVacationBalance.AvailableHours >= workHoursDuringVacationRequest;
 
                     response.Message = $"Dostępne godziny: {employeeVacationBalance.AvailableHours} h, wniosek zużywa: {workHoursDuringVacationRequest} h";
-                    response.AdditionalMessagesCollection.AddRange(employeeCalendarResponse.SerializeCalendarInformation());
+                    response.AdditionalMessagesCollection.AddRange(employeeCalendar.SerializeCalendarInformation());
                 }
                 
                 return response;
             }
+        }
+
+        private GetEmployeeCalendarForPeriodResponseCogisoftModel GetEmployeeCalendar(DateTime since, DateTime until, string externalEmployeeId, CogisoftServiceClient client)
+        {
+            //return JsonConvert.DeserializeObject<GetEmployeeCalendarForPeriodResponseCogisoftModel>(
+            //    @"{ ""f"":""json"", ""timetable"":[ { ""qf"":true, ""day"":[ { ""d"":""2018-01-01"", ""type"":""WŚ"", ""e"":[ { ""name"":""Nowy Rok"", ""xsi.type"":""ns0.holiday"" } ] }, { ""d"":""2018-01-02"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-03"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-04"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-05"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-06"", ""type"":""WŚ"", ""e"":[ { ""name"":""Trzech Króli"", ""xsi.type"":""ns0.holiday"" } ] }, { ""d"":""2018-01-07"", ""type"":""WN"", ""e"":[ ] }, { ""d"":""2018-01-08"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-09"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-10"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-11"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-12"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-13"", ""type"":""W5"", ""e"":[ ] }, { ""d"":""2018-01-14"", ""type"":""WN"", ""e"":[ ] }, { ""d"":""2018-01-15"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-16"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-17"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-18"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-19"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0. shift"" } ] }, { ""d"":""2018-01-20"", ""type"":""W5"", ""e"":[ ] }, { ""d"":""2018-01-21"", ""type"":""WN"", ""e"":[ ] }, { ""d"":""2018-01-22"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-23"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-24"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-25"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-26"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-27"", ""type"":""W5"", ""e"":[ ] }, { ""d"":""2018-01-28"", ""type"":""WN"", ""e"":[ ] }, { ""d"":""2018-01-29"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-30"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] }, { ""d"":""2018-01-31"", ""type"":""R"", ""e"":[ { ""id"":1, ""from"":""07:00:00"", ""to"":""15:00:00"", ""xsi.type"":""ns0.shift"" } ] } ], ""bc"":[ { ""from"":""2018-01-01"", ""to"":""2018-01-31"", ""expectedWT"":10560, ""actualWT"":10560 } ] } ] }");
+
+            GetEmployeeCalendarForPeriodRequestCogisoftModel employeeCalendarRequest = new GetEmployeeCalendarForPeriodRequestCogisoftModel(since, until, externalEmployeeId);
+
+            var employeeCalendarResponse =
+                client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
+                    GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
+
+            while (employeeCalendarResponse.timetable[0].Cid != null)
+            {
+                Thread.Sleep(1000);
+                employeeCalendarResponse =
+                    client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
+                        GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
+            }
+            
+            return employeeCalendarResponse;
         }
     }
 }

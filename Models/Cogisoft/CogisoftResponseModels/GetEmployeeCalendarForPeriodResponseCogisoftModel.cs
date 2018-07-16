@@ -8,95 +8,98 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
 {
     public class GetEmployeeCalendarForPeriodResponseCogisoftModel
     {
+            [JsonProperty("f")]
+            public string F { get; set; }
+
+            [JsonProperty("timetable")]
+            public Timetable[] timetable { get; set; }
+
+        public class Timetable
+        {
+            [JsonProperty("cid")]
+            public string Cid { get; set; }
+
+            [JsonProperty("qf")]
+            public bool Qf { get; set; }
+
+            [JsonProperty("day")]
+            public Day[] Day { get; set; }
+
+            [JsonProperty("bc")]
+            public object[] Bc { get; set; }
+        }
+
+        public class Day
+        {
+            [JsonProperty("d")]
+            public DateTime D { get; set; }
+
+            [JsonProperty("type")]
+            public DayType Type { get; set; }
+
+            [JsonProperty("e")]
+            public E[] E { get; set; }
+
+            public string GetDescription()
+            {
+                switch (Type)
+                {
+                    case DayType.R:
+                        return $"{D.ToShortDateString()}: Dzień pracujący, godziny: {string.Join(",", E.Select(ee => $"{ee.From} - {ee.To}"))}";
+                    case DayType.W5:
+                        return $"{D.ToShortDateString()}: Wolna sobota";
+                    case DayType.WN:
+                        return $"{D.ToShortDateString()}: Wolna niedziela";
+                    case DayType.WŚ:
+                        return E != null && E.Any()
+                            ? $"{D.ToShortDateString()}: {string.Join(",", E.Select(ee => $"{ee.Name}"))}"
+                            : $"{D.ToShortDateString()}: Wolne święto";
+                    default:
+                        return Type.ToString();
+                }
+            }
+        }
+
         public class E
         {
-            public string type { get; set; }
-            public string id { get; set; }
-            public string from { get; set; }
-            public string to { get; set; }
-            public string name { get; set; }
+            [JsonProperty("id")]
+            public long Id { get; set; }
+
+            [JsonProperty("from")]
+            public TimeSpan From { get; set; }
+
+            [JsonProperty("to")]
+            public TimeSpan To { get; set; }
+
+            [JsonProperty("name")]
+            public string Name { get; set; }
+
+            [JsonProperty("xsi.type")]
+            public string XsiType { get; set; }
         }
 
-        public class D
-        {
-            public string date { get; set; }
-            public string type { get; set; }
-            public List<E> e { get; set; }
-        }
-
-        public class M
-        {
-            public string nr { get; set; }
-            public string balance { get; set; }
-        }
-
-        public class Calendar
-        {
-            public List<D> d { get; set; }
-            public List<M> m { get; set; }
-        }
-
-        public Calendar calendar { get; set; }
-
-        //[JsonIgnore]
-        //private Dictionary<string, string> freeDayTypesDict = new Dictionary<string, string>() { {"W5", "dzień wolny"}, {"WN", "niedziela"}, {"WŚ", string.Empty} };
+        public enum DayType { R, W5, WN, WŚ };
 
         [JsonIgnore]
-        private List<string> workingDayTypesCollection = new List<string>() { "W" };
+        private readonly List<DayType> _workingDayTypesCollection = new List<DayType>() { DayType.R };
 
         public int GetWorkingDaysCount()
         {
-            return calendar.d.Count(day => workingDayTypesCollection.Contains(day.type));
+            return timetable[0].Day.Count(day => _workingDayTypesCollection.Contains(day.Type));
         }
 
         public decimal GetWorkingHoursCount()
         {
-            var shifts = calendar.d
-                .Where(day => workingDayTypesCollection.Contains(day.type))
-                .SelectMany(day => day.e);
+            var shifts = timetable[0].Day
+                .Where(day => _workingDayTypesCollection.Contains(day.Type))
+                .SelectMany(day => day.E);
 
-            return Convert.ToDecimal(shifts.Sum(e => (TimeSpan.Parse(e.to) - TimeSpan.Parse(e.from)).TotalHours));
+            return Convert.ToDecimal(shifts.Sum(e => (e.To - e.From).TotalHours));
         }
 
         public List<string> SerializeCalendarInformation()
         {
-            var serializedInfo = new List<string>();
-
-            foreach (var day in calendar.d)
-            {
-                if (workingDayTypesCollection.Contains(day.type))
-                {
-                    serializedInfo.Add(
-                        $"{day.date}: Dzień pracujący, godziny: {string.Join(",", day.e.Select(ee => $"{ee.from} - {ee.to}"))}");
-                }
-                else
-                {
-                    string vacationDayType;
-
-                    switch (day.type)
-                    {
-                        case "W5":
-                            vacationDayType = "Dzień wolny";
-                            break;
-                        case "WN":
-                            vacationDayType = "Niedziela";
-                            break;
-                        case "WŚ":
-                            vacationDayType = day.e != null && day.e.Any()
-                                ? $"{string.Join(",", day.e.Select(ee => $"{ee.name}"))}"
-                                : "WŚ";
-                            break;
-                        default:
-                            vacationDayType = day.type;
-                            break;
-                    }
-
-                    serializedInfo.Add(
-                        $"{day.date}: {vacationDayType}");
-                }
-            }
-
-            return serializedInfo;
+            return timetable[0].Day.Select(day => day.GetDescription()).ToList();
         }
     }
 }

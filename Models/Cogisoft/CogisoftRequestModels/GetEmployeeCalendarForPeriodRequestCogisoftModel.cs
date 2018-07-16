@@ -8,28 +8,29 @@ using CogisoftConnector.Models.Cogisoft.CogisoftSOAPEnvelopeModels;
 
 namespace CogisoftConnector.Models.Cogisoft
 {
-    public class P
+    public class Timetable
     {
-        public P(DateTime from, DateTime to, string externalEmployeeIdentifier)
+        public Timetable(DateTime from, DateTime to, string externalEmployeeIdentifier)
         {
             this.from = from.ToString();
             this.to = to.ToString();
-            this.card = externalEmployeeIdentifier;
+            this.emploee = externalEmployeeIdentifier;
         }
 
         public string token { get; set; }
+        public string emploee { get; set; }
         public string from { get; set; }
         public string to { get; set; }
-        public string card { get; set; }
     }
 
     public class GetEmployeeCalendarForPeriodRequestCogisoftModel : IRequestCogisoftModel
     {
-        public P p { get; set; }
+        public Timetable timetable { get; set; }
+
 
         public GetEmployeeCalendarForPeriodRequestCogisoftModel(DateTime from, DateTime to, string externalEmployeeIdentifier)
         {
-            p = new P(from, to, externalEmployeeIdentifier);
+            timetable = new Timetable(from, to, externalEmployeeIdentifier);
         }
 
         public string GetSOAPEnvelope()
@@ -44,7 +45,7 @@ namespace CogisoftConnector.Models.Cogisoft
 
         public void SetToken(string token)
         {
-            this.p.token = token;
+            this.timetable.token = token;
         }
     }
 }
