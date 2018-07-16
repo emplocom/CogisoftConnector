@@ -29,6 +29,13 @@ namespace CogisoftConnector.Logic
                 var employeeCalendar = GetEmployeeCalendar(emploRequest.Since, emploRequest.Until,
                     emploRequest.ExternalEmployeeId, client);
 
+                if (employeeCalendar.timetable[0].Cid != null)
+                {
+                    response.RequestIsValid = false;
+                    response.Message = "Wystąpił błąd - nie udało się pobrać kalendarza pracownika";
+                    return response;
+                }
+
                 var employeeVacationBalance =
                     _cogisoftSyncVacationDataLogic.GetVacationDataForSingleEmployee(emploRequest.ExternalEmployeeId);
                 
@@ -73,8 +80,10 @@ namespace CogisoftConnector.Logic
                 client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
                     GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
 
-            while (employeeCalendarResponse.timetable[0].Cid != null)
+            int retryCounter = 0;
+            while (employeeCalendarResponse.timetable[0].Cid != null && retryCounter < 10)
             {
+                retryCounter++;
                 Thread.Sleep(1000);
                 employeeCalendarResponse =
                     client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,

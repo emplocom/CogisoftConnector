@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using CogisoftConnector.Logic;
 using Newtonsoft.Json;
 
 namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
@@ -45,14 +46,14 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
                 switch (Type)
                 {
                     case DayType.R:
-                        return $"{D.ToShortDateString()}: Dzień pracujący, godziny: {string.Join(",", E.Select(ee => $"{ee.From} - {ee.To}"))}";
+                        return $"{D.ToShortDateString()}: Dzień pracujący, godziny: {string.Join(",", E.DistinctBy(ee => ee.Id).Select(ee => $"{ee.From} - {ee.To}"))}";
                     case DayType.W5:
                         return $"{D.ToShortDateString()}: Wolna sobota";
                     case DayType.WN:
                         return $"{D.ToShortDateString()}: Wolna niedziela";
                     case DayType.WŚ:
                         return E != null && E.Any()
-                            ? $"{D.ToShortDateString()}: {string.Join(",", E.Select(ee => $"{ee.Name}"))}"
+                            ? $"{D.ToShortDateString()}: {string.Join(",", E.DistinctBy(ee => ee.Id).Select(ee => $"{ee.Name}"))}"
                             : $"{D.ToShortDateString()}: Wolne święto";
                     default:
                         return Type.ToString();
@@ -92,7 +93,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
         {
             var shifts = timetable[0].Day
                 .Where(day => _workingDayTypesCollection.Contains(day.Type))
-                .SelectMany(day => day.E);
+                .SelectMany(day => day.E.DistinctBy(ee => ee.Id));
 
             return Convert.ToDecimal(shifts.Sum(e => (e.To - e.From).TotalHours));
         }

@@ -12,8 +12,8 @@ namespace CogisoftConnector.Models.Cogisoft
     {
         public Timetable(DateTime from, DateTime to, string externalEmployeeIdentifier)
         {
-            this.from = from.ToString();
-            this.to = to.ToString();
+            this.from = from.ToShortDateString();
+            this.to = to.ToShortDateString();
             this.emploee = externalEmployeeIdentifier;
         }
 
