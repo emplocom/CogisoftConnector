@@ -26,7 +26,6 @@ namespace CogisoftConnector.Controllers
         [HttpGet]
         public async Task<HttpResponseMessage> SynchronizeEmployees([FromUri] string listOfIds = "")
         {
-            await _employeeImportLogic.ImportEmployeeData();
             if (listOfIds.IsEmpty())
             {
                 var jobId = BackgroundJob.Enqueue(

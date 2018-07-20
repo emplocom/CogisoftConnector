@@ -4,7 +4,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using CogisoftConnector.Logic;
-using EmploApiSDK.Logger;
 
 namespace CogisoftConnector.Controllers
 {

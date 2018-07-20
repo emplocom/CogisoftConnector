@@ -156,7 +156,6 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="Logic\ApiRequestModelBuilder.cs" />
     <Compile Include="Logic\CogisoftEmployeeImportConfiguration.cs" />
     <Compile Include="Logic\CogisoftServiceClient.cs" />
     <Compile Include="Logic\CogisoftVacationValidationLogic.cs" />

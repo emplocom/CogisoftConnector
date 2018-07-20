@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading;
 using CogisoftConnector.Models.Cogisoft;
+using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Vacations.IntegratedVacationValidation;
 using EmploApiSDK.Logger;
-using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
 {
@@ -32,7 +32,7 @@ namespace CogisoftConnector.Logic
                 if (employeeCalendar.timetable[0].Cid != null)
                 {
                     response.RequestIsValid = false;
-                    response.Message = "Wystąpił błąd - nie udało się pobrać kalendarza pracownika";
+                    response.Message = "Wystąpił błąd - kalendarz dla nie jest jeszcze gotowy. Zaczekaj kilka minut i spróbuj ponownie.";
                     return response;
                 }
 
@@ -80,11 +80,26 @@ namespace CogisoftConnector.Logic
                 client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
                     GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
 
+            if (employeeCalendarResponse.timetable[0].Cid == null)
+            {
+                return employeeCalendarResponse;
+            }
+
             int retryCounter = 0;
-            while (employeeCalendarResponse.timetable[0].Cid != null && retryCounter < 10)
+            var asyncCommissionRequest = new AsyncCommisionStatusRequestCogisoftModel(employeeCalendarResponse.timetable[0].Cid);
+            AsyncProcessingResultResponseCogisoftModel asyncCommissionResponse;
+
+            do
             {
                 retryCounter++;
-                Thread.Sleep(1000);
+                Thread.Sleep(retryCounter * 1000);
+                asyncCommissionResponse =
+                    client.PerformRequestReceiveResponse<AsyncCommisionStatusRequestCogisoftModel,
+                        AsyncProcessingResultResponseCogisoftModel>(asyncCommissionRequest);
+            } while (!asyncCommissionResponse.ci[0].processed && retryCounter < 10);
+
+            if (asyncCommissionResponse.ci[0].processed)
+            {
                 employeeCalendarResponse =
                     client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
                         GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);

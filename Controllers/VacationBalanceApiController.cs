@@ -1,12 +1,9 @@
-using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.WebPages;
 using CogisoftConnector.Logic;
-using EmploApiSDK.Logger;
 using Hangfire;
 
 namespace CogisoftConnector.Controllers

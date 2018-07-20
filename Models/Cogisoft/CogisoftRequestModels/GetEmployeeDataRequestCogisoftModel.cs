@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Web;
-using CogisoftConnector.Logic;
 using CogisoftConnector.Models.Cogisoft.CogisoftSOAPEnvelopeModels;
-using Newtonsoft.Json;
 
 namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
 {
@@ -27,14 +23,25 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
 
     public class Q
     {
-        public Q(List<string> selectProperties, List<string> employeeIdsToImport)
+        public Q(List<string> employeeIdsToImport)
         {
-            ss = selectProperties;
             p = new P();
             if (employeeIdsToImport.Any())
             {
                 fs = $"FKF_OSOB.FKF_OSOB.FKF_WIZYTOWKA in [{string.Join(",", employeeIdsToImport)}]";
             }
+            ss = new List<string>()
+            {
+                "FLD__ID",
+                "FKF_OSOB.FKF_OSOB.FKF_WIZYTOWKA",
+                "FKF_OSOB.FKF_OSOB.FLD_IMIE1",
+                "FKF_OSOB.FKF_OSOB.FLD_NAZWISKO",
+                "FKF_OSOB.FKF_OSOB.FKF_WIZYTOWKA.FKX_KNTK_DOM_KONTAKT_BY_RODZAJ_ADRES_20E_2DMAIL.FLD_KONTAKT",
+                "FKF_STANOWISKO.FLD_NAZWA",
+                "FKF_JEDN_ORG.FLD_SYMBOL",
+                "FKF_JEDN_ORG.FLD_NAZWA",
+                "FKF_JEDN_ORG.FKF_KIEROWNIK.FKF_WIZYTOWKA.FKX_KNTK_DOM_KONTAKT_BY_RODZAJ_ADRES_20E_2DMAIL.FLD_KONTAKT"
+            };
         }
 
         public string tbl { get; set; } = "KADR:PRACOWNICY";
@@ -45,9 +52,9 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
 
     public class Qp
     {
-        public Qp(List<string> selectProperties, List<string> employeeIdsToImport)
+        public Qp(List<string> employeeIdsToImport)
         {
-            q = new Q(selectProperties, employeeIdsToImport);
+            q = new Q(employeeIdsToImport);
         }
 
         public string token { get; set; }
@@ -56,10 +63,9 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
 
     public class GetEmployeeDataRequestCogisoftModel : IRequestCogisoftModel
     {
-        public GetEmployeeDataRequestCogisoftModel(
-            CogisoftEmployeeImportConfiguration cogisoftEmployeeImportMappingConfiguration, List<string> employeeIdsToImport)
+        public GetEmployeeDataRequestCogisoftModel(List<string> employeeIdsToImport)
         {
-            qp = new Qp(cogisoftEmployeeImportMappingConfiguration.PropertyMappings.Select(m => m.ExternalPropertyName).ToList(), employeeIdsToImport);
+            qp = new Qp(employeeIdsToImport);
         }
 
         public Qp qp { get; set; }

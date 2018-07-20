@@ -152,6 +152,10 @@ namespace CogisoftConnector.Controllers
                 else
                 {
                     _logger.WriteLine($"Webhook VacationStatusChanged ignored");
+                    if (model.HasManagedVacationDaysBalance)
+                    {
+                        _cogisoftSyncVacationDataLogic.SyncVacationDataForSingleEmployee(model.ExternalEmployeeId);
+                    }
                     return new HttpResponseMessage(HttpStatusCode.OK);
                 }
             }
