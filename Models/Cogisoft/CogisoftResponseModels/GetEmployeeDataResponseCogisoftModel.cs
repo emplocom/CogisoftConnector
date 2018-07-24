@@ -71,7 +71,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
 
         public List<UserDataRowWithStatus> GetUserDataRowCollection(CogisoftEmployeeImportConfiguration configuration)
         {
-            return this.qr[0].p[0].r.Select(r => BuildUserDataRow(configuration, r)).ToList();
+            return this.qr[0].p[0].r.Select(r => BuildUserDataRow(configuration, r)).Where(r => !r.errorMessage.Contains("Pracownik zwolniony")).ToList();
         }
 
         public bool AnyRemainingObjectsLeft()
