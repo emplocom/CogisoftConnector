@@ -72,6 +72,8 @@ namespace CogisoftConnector.Logic
             {
                 await Import(dataChunk.ToList());
             }
+
+            _logger.WriteLine($"Vacation data import finished");
         }
 
         private List<IntegratedVacationsBalanceDtoWrapper> GetVacationData(QueryParameters queryParameters, List<string> employeeIdentifiers)
@@ -185,26 +187,16 @@ namespace CogisoftConnector.Logic
                     BalanceList = employeeVacationDataModels.Where(m => !m.MissingData).Select(m => m.Result).ToList()
                 });
 
-            bool dryRun;
-            if (bool.TryParse(ConfigurationManager.AppSettings["DryRun"], out dryRun) && dryRun)
-            {
+            var response = await _apiClient
+                .SendPostAsync<ImportIntegratedVacationsBalanceDataResponseModel>(
+                    request, _apiConfiguration.ImportIntegratedVacationsBalanceDataUrl);
+
+            response.resultRows = response.resultRows.OrderBy(r => r.ExternalEmployeeId).ToList();
+
+            response.resultRows.ForEach(r =>
                 _logger.WriteLine(
-                    "Importer is in DryRun mode, data retrieved from Cogisoft will be printed to log, but it won't be sent to emplo");
-                _logger.WriteLine(request);
-            }
-            else
-            {
-                var response = await _apiClient
-                    .SendPostAsync<ImportIntegratedVacationsBalanceDataResponseModel>(
-                        request, _apiConfiguration.ImportIntegratedVacationsBalanceDataUrl);
-
-                response.resultRows = response.resultRows.OrderBy(r => r.ExternalEmployeeId).ToList();
-
-                response.resultRows.ForEach(r =>
-                    _logger.WriteLine(
-                        $"Employee Id: {r.ExternalEmployeeId}, Import result status: [{r.OperationStatus.ToString()}]{(r.Message.IsEmpty() ? string.Empty : $", Message: {r.Message}")}",
-                        MapImportStatusToLogLevel(r.OperationStatus)));
-            }
+                    $"Employee Id: {r.ExternalEmployeeId}, Import result status: [{r.OperationStatus.ToString()}]{(r.Message.IsEmpty() ? string.Empty : $", Message: {r.Message}")}",
+                    MapImportStatusToLogLevel(r.OperationStatus)));
         }
 
         private LogLevelEnum MapImportStatusToLogLevel(ImportVacationDataStatusCode status)
@@ -222,17 +214,17 @@ namespace CogisoftConnector.Logic
 
         private int GetRetryInterval(QueryParameters queryParameters, int? employeesCount = null)
         {
-            int employeeCount = 0;
-            if (!employeesCount.HasValue)
+            int multiplier = 0;
+            if (!employeesCount.HasValue || employeesCount == 0)
             {
-                employeeCount = queryParameters.CogisoftQueryPageSize;
+                multiplier = queryParameters.CogisoftQueryPageSize;
             }
             else
             {
-                employeeCount = employeesCount.Value;
+                multiplier = employeesCount.Value;
             }
 
-            return queryParameters.RetryInterval_ms + 500 * employeeCount;
+            return queryParameters.RetryInterval_ms + 500 * multiplier;
         }
     }
 }

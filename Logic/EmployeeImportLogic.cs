@@ -130,6 +130,9 @@ namespace CogisoftConnector.Logic
 
                 foreach (var hierarchyLevelToImport in hierarchicalRowStructure)
                 {
+                    _logger.WriteLine(
+                        "---------------------------------------------------------------------------------------------------------------");
+
                     ImportUsersRequestModel importUsersRequestModel =
                         new ImportUsersRequestModel(importMode, requireRegistrationForNewEmployees)
                         {
@@ -138,9 +141,7 @@ namespace CogisoftConnector.Logic
 
                     if (dryRun)
                     {
-                        _logger.WriteLine(
-                            "---------------------------------------------------------------------------------------------------------------");
-                        _logger.WriteLine($"Data that would be imported (hierarchy level {hierarchicalRowStructure.IndexOf(hierarchyLevelToImport) + 1}):");
+                        _logger.WriteLine($"#### Data that would be imported (hierarchy level {hierarchicalRowStructure.IndexOf(hierarchyLevelToImport) + 1}): ####");
                         importUsersRequestModel.Rows.ForEach(row =>
                             _logger.WriteLine(string.Join(" | ", row.Select(r => $"{r.Key}: {r.Value}"))));
                     }
@@ -167,7 +168,7 @@ namespace CogisoftConnector.Logic
 
                 if (dryRun)
                 {
-                    _logger.WriteLine("Data that would be imported:");
+                    _logger.WriteLine("#### Data that would be imported: ####");
                     importUsersRequestModel.Rows.ForEach(row =>
                         _logger.WriteLine(string.Join(" | ", row.Select(r => $"{r.Key}: {r.Value}"))));
                 }
@@ -183,18 +184,14 @@ namespace CogisoftConnector.Logic
 
             _logger.WriteLine(
                 "---------------------------------------------------------------------------------------------------------------");
-            _logger.WriteLine("Invalid data:");
+            _logger.WriteLine("#### Invalid data: ####");
             foreach (var reasonGroup in allRowsCollection.Where(row => !row.buildStatus).ToList().GroupBy(r => r.errorMessage).Select(g => new { reason = g.Key, rows = g.ToList()}))
             {
-                _logger.WriteLine($"REASON: {reasonGroup.reason}");
+                _logger.WriteLine($"#### REASON: {reasonGroup.reason} ####");
                 reasonGroup.rows.ForEach(row =>
                     _logger.WriteLine(
-                        $"{string.Join(" | ", row.userDataRow.Select(r => $"{r.Key}: {r.Value}"))}, Message: {row.errorMessage}"));
+                        $"| {string.Join(" | ", row.userDataRow.Select(r => $"{r.Key}: {r.Value}"))} | {row.errorMessage}"));
             }
-
-            //allRowsCollection.Where(row => !row.buildStatus).ToList().ForEach(row =>
-            //    _logger.WriteLine(
-            //        $"{string.Join(" | ", row.userDataRow.Select(r => $"{r.Key}: {r.Value}"))}, Message: {row.errorMessage}"));
         }
 
         public async Task ImportEmployeeData(List<string> employeeIdsToImport = null)
