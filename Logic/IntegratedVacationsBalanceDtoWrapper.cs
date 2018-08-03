@@ -11,6 +11,11 @@ namespace CogisoftConnector.Logic
         public IntegratedVacationsBalanceDto Result { get; set; }
         public bool MissingData { get; set; }
 
+        public IntegratedVacationsBalanceDtoWrapper()
+        {
+
+        }
+
         public IntegratedVacationsBalanceDtoWrapper(VacationDataResponseCogisoftModel.R employeeResponseCollection, string externalVacationTypeId)
         {
             Result = new IntegratedVacationsBalanceDto();

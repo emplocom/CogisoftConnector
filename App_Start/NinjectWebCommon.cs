@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Linq;
 using System.Web;
 using CogisoftConnector;
@@ -49,7 +50,10 @@ namespace CogisoftConnector
             kernel.Bind<ILogger>().ToMethod(ctx => LoggerFactory.CreateLogger(null)).InNamedOrBackgroundJobScope(context => context.Kernel.Components.GetAll<INinjectHttpApplicationPlugin>().Select(c => c.GetRequestScope(context)).FirstOrDefault(s => s != null));
             kernel.Bind<CogisoftSyncVacationDataLogic>().ToSelf().InRequestScope();
             kernel.Bind<CogisoftWebhookLogic>().ToSelf().InRequestScope();
-            kernel.Bind<CogisoftVacationValidationLogic>().ToSelf().InRequestScope();
+
+            bool mockMode = bool.TryParse(ConfigurationManager.AppSettings["MockMode"], out mockMode) && mockMode;
+            kernel.Bind<ICogisoftVacationValidationLogic>().To<CogisoftVacationValidationMockLogic>().When(ctx => mockMode).InRequestScope();
+            kernel.Bind<ICogisoftVacationValidationLogic>().To<CogisoftVacationValidationLogic>().When(ctx => !mockMode).InRequestScope();
             kernel.Bind<ConfigurationTestLogic>().ToSelf().InRequestScope();
             kernel.Bind<EmployeeImportLogic>().ToSelf().InRequestScope();
         }

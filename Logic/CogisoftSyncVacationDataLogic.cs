@@ -52,7 +52,7 @@ namespace CogisoftConnector.Logic
             _apiClient = new ApiClient(_logger, _apiConfiguration);
         }
 
-        public IntegratedVacationsBalanceDto GetVacationDataForSingleEmployee(string employeeIdentifier)
+        public IntegratedVacationsBalanceDto GetVacationDataForSingleEmployee(string employeeIdentifier, string externalVacationTypeId)
         {
             return GetVacationData(new QueryParameters() {SkipInitialRecalculation = true, RetryInterval_ms = 1000}, employeeIdentifier.AsList()).First().Result;
         }
@@ -68,7 +68,7 @@ namespace CogisoftConnector.Logic
         public async Task SyncVacationData(List<string> employeeIdentifiers = null)
         {
             var vacationData = GetVacationData(new QueryParameters(), employeeIdentifiers);
-            foreach (var dataChunk in vacationData.Chunk(100).ToList())
+            foreach (var dataChunk in vacationData.Where(vd => !vd.MissingData).Chunk(100).ToList())
             {
                 await Import(dataChunk.ToList());
             }
@@ -171,6 +171,22 @@ namespace CogisoftConnector.Logic
                         string.Join(", ",
                             modelsWithMissingData
                                 .Select(m => m.Result.ExternalEmployeeId).ToList()), LogLevelEnum.Error);
+
+                    modelsFinalCollection.AddRange(modelsWithMissingData
+                        .Select(m => m.Result.ExternalEmployeeId).Select(e => new IntegratedVacationsBalanceDtoWrapper
+                        {
+                            MissingData = true,
+                            Result = new IntegratedVacationsBalanceDto()
+                            {
+                                ExternalEmployeeId = e,
+                                OnDemandDays = -1,
+                                OutstandingDays = -1,
+                                OutstandingHours = -1,
+                                AvailableHours = -1,
+                                AvailableDays = -1,
+                                ExternalVacationTypeId = queryParameters.DefaultExternalVacationTypeId
+                            }
+                        }));
                 }
 
             }

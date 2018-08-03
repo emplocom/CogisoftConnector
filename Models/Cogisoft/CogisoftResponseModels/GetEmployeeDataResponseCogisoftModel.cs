@@ -71,7 +71,8 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
 
         public List<UserDataRowWithStatus> GetUserDataRowCollection(CogisoftEmployeeImportConfiguration configuration)
         {
-            return this.qr[0].p[0].r.Select(r => BuildUserDataRow(configuration, r)).Where(r => !r.errorMessage.Contains("Pracownik zwolniony")).ToList();
+            return this.qr[0].p[0].r.Select(r => BuildUserDataRow(configuration, r))//.Where(r => !r.errorMessage.Contains("Pracownik zwolniony"))
+                .ToList();
         }
 
         public bool AnyRemainingObjectsLeft()
@@ -85,11 +86,11 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
 
             var unit = GetOrganizationalUnit(row);
 
-            if (unit != null && unit.Contains("zwolnieni"))
-            {
-                userDataRowWithStatus.buildStatus = false;
-                userDataRowWithStatus.AppendErrorMessage("Pracownik zwolniony");
-            }
+            //if (unit != null && unit.Contains("zwolnieni"))
+            //{
+            //    userDataRowWithStatus.buildStatus = false;
+            //    userDataRowWithStatus.AppendErrorMessage("Pracownik zwolniony");
+            //}
 
             var login = GetValueDefaultOperation(row, 4);
             if (login == null)

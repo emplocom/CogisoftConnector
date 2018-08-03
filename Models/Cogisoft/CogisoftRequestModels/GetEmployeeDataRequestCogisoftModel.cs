@@ -26,10 +26,10 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
         public Q(List<string> employeeIdsToImport)
         {
             p = new P();
-            if (employeeIdsToImport.Any())
-            {
-                fs = $"FKF_OSOB.FKF_OSOB.FKF_WIZYTOWKA in [{string.Join(",", employeeIdsToImport)}]";
-            }
+
+            fs =
+                $"FLD_DATA_ZWOLN == null{(employeeIdsToImport.Any() ? $" and FKF_OSOB.FKF_OSOB.FKF_WIZYTOWKA in [{string.Join(",", employeeIdsToImport)}]" : string.Empty)}";
+
             ss = new List<string>()
             {
                 "FLD__ID",
