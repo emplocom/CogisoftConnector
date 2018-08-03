@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using CogisoftConnector.Models.Cogisoft;
 using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
@@ -21,53 +22,59 @@ namespace CogisoftConnector.Logic
 
         public VacationValidationResponseModel ValidateVacationRequest(VacationValidationRequestModel emploRequest)
         {
-            using (var client = new CogisoftServiceClient(_logger))
-            {
-                var employeeCalendar = GetEmployeeCalendar(emploRequest.Since, emploRequest.Until,
-                    emploRequest.ExternalEmployeeId, client);
-                
-                var employeeVacationBalance =
-                    _cogisoftSyncVacationDataLogic.GetVacationDataForSingleEmployee(emploRequest.ExternalEmployeeId, emploRequest.ExternalVacationTypeId);
+            var getCalendarTask = Task.Run(() => GetEmployeeCalendar(emploRequest.Since, emploRequest.Until,
+                emploRequest.ExternalEmployeeId));
 
-                return CogisoftVacationValidator.PerformValidation(employeeCalendar, employeeVacationBalance,
-                    emploRequest.IsOnDemand);
-            }
+            var getVacationDataTask = Task.Run(() =>
+                _cogisoftSyncVacationDataLogic.GetVacationDataForSingleEmployee(emploRequest.ExternalEmployeeId,
+                    emploRequest.ExternalVacationTypeId));
+
+            Task.WaitAll(getCalendarTask, getVacationDataTask);
+
+            return CogisoftVacationValidator.PerformValidation(getCalendarTask.Result, getVacationDataTask.Result,
+                emploRequest.IsOnDemand);
         }
 
-        private GetEmployeeCalendarForPeriodResponseCogisoftModel GetEmployeeCalendar(DateTime since, DateTime until, string externalEmployeeId, CogisoftServiceClient client)
+        private GetEmployeeCalendarForPeriodResponseCogisoftModel GetEmployeeCalendar(DateTime since,
+            DateTime until, string externalEmployeeId)
         {
-            GetEmployeeCalendarForPeriodRequestCogisoftModel employeeCalendarRequest = new GetEmployeeCalendarForPeriodRequestCogisoftModel(since, until, externalEmployeeId);
-
-            var employeeCalendarResponse =
-                client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
-                    GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
-
-            if (employeeCalendarResponse.timetable[0].Cid == null)
+            using (var client = new CogisoftServiceClient(_logger))
             {
-                return employeeCalendarResponse;
-            }
+                GetEmployeeCalendarForPeriodRequestCogisoftModel employeeCalendarRequest =
+                    new GetEmployeeCalendarForPeriodRequestCogisoftModel(since, until, externalEmployeeId);
 
-            int retryCounter = 0;
-            var asyncCommissionRequest = new AsyncCommisionStatusRequestCogisoftModel(employeeCalendarResponse.timetable[0].Cid);
-            AsyncProcessingResultResponseCogisoftModel asyncCommissionResponse;
-
-            do
-            {
-                retryCounter++;
-                Thread.Sleep(retryCounter * 1000);
-                asyncCommissionResponse =
-                    client.PerformRequestReceiveResponse<AsyncCommisionStatusRequestCogisoftModel,
-                        AsyncProcessingResultResponseCogisoftModel>(asyncCommissionRequest);
-            } while (!asyncCommissionResponse.ci[0].processed && retryCounter < 10);
-
-            if (asyncCommissionResponse.ci[0].processed)
-            {
-                employeeCalendarResponse =
+                var employeeCalendarResponse =
                     client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
                         GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
+
+                if (employeeCalendarResponse.timetable[0].Cid == null)
+                {
+                    return employeeCalendarResponse;
+                }
+
+                int retryCounter = 0;
+                var asyncCommissionRequest =
+                    new AsyncCommisionStatusRequestCogisoftModel(employeeCalendarResponse.timetable[0].Cid);
+                AsyncProcessingResultResponseCogisoftModel asyncCommissionResponse;
+
+                do
+                {
+                    retryCounter++;
+                    Thread.Sleep(retryCounter * 500);
+                    asyncCommissionResponse =
+                        client.PerformRequestReceiveResponse<AsyncCommisionStatusRequestCogisoftModel,
+                            AsyncProcessingResultResponseCogisoftModel>(asyncCommissionRequest);
+                } while (!asyncCommissionResponse.ci[0].processed && retryCounter < 10);
+
+                if (asyncCommissionResponse.ci[0].processed)
+                {
+                    employeeCalendarResponse =
+                        client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
+                            GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
+                }
+
+                return employeeCalendarResponse;
             }
-            
-            return employeeCalendarResponse;
         }
     }
 }
