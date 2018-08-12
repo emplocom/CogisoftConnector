@@ -1,3 +1,5 @@
+using System;
+using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -27,13 +29,11 @@ namespace CogisoftConnector.Controllers
         {
             if (listOfIds.IsEmpty())
             {
-                var jobId = BackgroundJob.Enqueue(
-                    () => _cogisoftSyncVacationDataLogic.SyncVacationData(null));
+                _cogisoftSyncVacationDataLogic.SyncVacationData();
             }
             else
             {
-                var jobId = BackgroundJob.Enqueue(
-                    () => _cogisoftSyncVacationDataLogic.SyncVacationData(listOfIds.Split(',').ToList()));
+                _cogisoftSyncVacationDataLogic.SyncVacationData(listOfIds.Split(',').ToList());
             }
 
             return new HttpResponseMessage(HttpStatusCode.OK);

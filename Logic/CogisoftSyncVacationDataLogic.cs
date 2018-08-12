@@ -54,34 +54,36 @@ namespace CogisoftConnector.Logic
 
         public IntegratedVacationsBalanceDto GetVacationDataForSingleEmployee(string employeeIdentifier, string externalVacationTypeId)
         {
-            return GetVacationData(new QueryParameters() {SkipInitialRecalculation = true, RetryInterval_ms = 1000}, employeeIdentifier.AsList()).First().Result;
+            using (var client = new CogisoftServiceClient(_logger))
+            {
+                return GetVacationDataRecursive(new QueryParameters() { SkipInitialRecalculation = true, RetryInterval_ms = 1000 }, client, employeeIdentifier.AsList()).First().Result;
+            }
         }
 
-        public void SyncVacationDataForSingleEmployee(string employeeIdentifier)
+        public void SyncVacationData(List<string> employeeIdentifiers = null)
         {
-            _logger.WriteLine($"Vacation data synchronization for employee {employeeIdentifier} will be performed in 5 minutes");
+            _logger.WriteLine($"Vacation data synchronization for employees {(employeeIdentifiers == null ? string.Empty : string.Join(",", employeeIdentifiers))} will be performed in {double.Parse(ConfigurationManager.AppSettings["EmployeeVacationBalanceSynchronizationDelay_ms"]) / 60000} minutes");
             var jobId = BackgroundJob.Schedule(
-                () => SyncVacationData(employeeIdentifier.AsList()),
+                () => SyncVacationDataInternal(DateTime.UtcNow, employeeIdentifiers),
                 TimeSpan.FromMilliseconds(int.Parse(ConfigurationManager.AppSettings["EmployeeVacationBalanceSynchronizationDelay_ms"])));
         }
 
-        public async Task SyncVacationData(List<string> employeeIdentifiers = null)
+        #region GetVacationDataLogic
+
+        private async Task SyncVacationDataInternal(DateTime synchronizationTime, List<string> employeeIdentifiers = null)
         {
-            var vacationData = GetVacationData(new QueryParameters(), employeeIdentifiers);
+            List<IntegratedVacationsBalanceDtoWrapper> vacationData;
+            using (var client = new CogisoftServiceClient(_logger))
+            {
+                vacationData = GetVacationDataRecursive(new QueryParameters(), client, employeeIdentifiers);
+            }
+
             foreach (var dataChunk in vacationData.Where(vd => !vd.MissingData).Chunk(100).ToList())
             {
-                await Import(dataChunk.ToList());
+                await Import(synchronizationTime, dataChunk.ToList());
             }
 
             _logger.WriteLine($"Vacation data import finished");
-        }
-
-        private List<IntegratedVacationsBalanceDtoWrapper> GetVacationData(QueryParameters queryParameters, List<string> employeeIdentifiers)
-        {
-            using (var client = new CogisoftServiceClient(_logger))
-            {
-                return GetVacationDataRecursive(queryParameters, client, employeeIdentifiers);
-            }
         }
 
         private List<IntegratedVacationsBalanceDtoWrapper> GetVacationDataRecursive(QueryParameters queryParameters, CogisoftServiceClient client, List<string> employeeIdentifiers, int retryCounter = 0)
@@ -195,11 +197,31 @@ namespace CogisoftConnector.Logic
             return modelsFinalCollection;
         }
 
-        public async Task Import(List<IntegratedVacationsBalanceDtoWrapper> employeeVacationDataModels)
+        private int GetRetryInterval(QueryParameters queryParameters, int? employeesCount = null)
+        {
+            int multiplier = 0;
+            if (!employeesCount.HasValue || employeesCount == 0)
+            {
+                multiplier = queryParameters.CogisoftQueryPageSize;
+            }
+            else
+            {
+                multiplier = employeesCount.Value;
+            }
+
+            return queryParameters.RetryInterval_ms + 500 * multiplier;
+        }
+
+        #endregion
+
+        #region ImportLogic
+
+        private async Task Import(DateTime synchronizationTimestamp, List<IntegratedVacationsBalanceDtoWrapper> employeeVacationDataModels)
         {
             var request = JsonConvert.SerializeObject(
                 new ImportIntegratedVacationsBalanceDataRequestModel
                 {
+                    SynchronizationTime = synchronizationTimestamp,
                     BalanceList = employeeVacationDataModels.Where(m => !m.MissingData).Select(m => m.Result).ToList()
                 });
 
@@ -228,19 +250,6 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        private int GetRetryInterval(QueryParameters queryParameters, int? employeesCount = null)
-        {
-            int multiplier = 0;
-            if (!employeesCount.HasValue || employeesCount == 0)
-            {
-                multiplier = queryParameters.CogisoftQueryPageSize;
-            }
-            else
-            {
-                multiplier = employeesCount.Value;
-            }
-
-            return queryParameters.RetryInterval_ms + 500 * multiplier;
-        }
+        #endregion
     }
 }
