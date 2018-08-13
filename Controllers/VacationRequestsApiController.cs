@@ -177,7 +177,7 @@ namespace CogisoftConnector.Controllers
         public HttpResponseMessage CheckAsyncOperationState(string commisionIdentifier, OperationType operationType, string externalEmployeeIdentifier, string externalVacationTypeIdentifier, bool hasManagedVacationDaysBalance)
         {
             _logger.WriteLine($"Webhook status check, Commission Id: {commisionIdentifier}, Operation type: {operationType}, External employee identifier: {externalEmployeeIdentifier}, External vacation type identifier {externalVacationTypeIdentifier}, HasManagedVacationDaysBalance: {hasManagedVacationDaysBalance}");
-            throw new HttpResponseException(BuildErrorResponseFromException(new Exception()));
+            //throw new HttpResponseException(BuildErrorResponseFromException(new Exception()));
             try
             {
                 var result = _cogisoftWebhookLogic.CheckAsyncOperationState(commisionIdentifier);
@@ -278,7 +278,7 @@ namespace CogisoftConnector.Controllers
         public HttpResponseMessage VacationWebhookErrorRecovery([FromBody] VacationWebhookErrorRecoveryModel model)
         {
             _logger.WriteLine($"Action received: VacationWebhookErrorRecovery, {JsonConvert.SerializeObject(model)}");
-            return new HttpResponseMessage(HttpStatusCode.OK);
+            //return new HttpResponseMessage(HttpStatusCode.OK);
             try
             {
                 var result = _cogisoftWebhookLogic.PerformSynchronousCancellation(model);

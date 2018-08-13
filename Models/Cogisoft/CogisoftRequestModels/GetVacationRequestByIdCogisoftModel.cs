@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
 using CogisoftConnector.Models.Cogisoft.CogisoftSOAPEnvelopeModels;
 
 namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
@@ -8,19 +9,20 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
     {
         public class P
         {
-            public int s { get; set; }
+            public int s { get; set; } = 1;
         }
 
         public class Q
         {
-            public string tbl { get; set; }
-            public List<string> ss { get; set; }
+            public string tbl { get; set; } = "KADR:NIEOBECNOSCI";
+            public List<string> ss { get; set; } = new List<string> { "FLD__ID" };
             public string fs { get; set; }
             public P p { get; set; }
 
             public Q(string vacationIdentifier)
             {
                 fs = $"FLD__ID == {vacationIdentifier}";
+                p = new P();
             }
         }
 

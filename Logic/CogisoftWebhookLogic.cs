@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Vacations.IntegratedVacationWebhooks.RequestModels;
@@ -98,17 +99,23 @@ namespace CogisoftConnector.Logic
 
                     AsyncProcessingResultResponseCogisoftModel asyncResponse = null;
 
-                    int retryCounter = 10;
-                    do
+                    AsyncCommisionStatusRequestCogisoftModel asyncCogisoftRequest =
+                        new AsyncCommisionStatusRequestCogisoftModel(
+                            commisionIdentifier);
+
+                    asyncResponse =
+                        client.PerformRequestReceiveResponse<AsyncCommisionStatusRequestCogisoftModel,
+                            AsyncProcessingResultResponseCogisoftModel>(asyncCogisoftRequest);
+
+                    int retryCounter = 6;
+                    while (!asyncResponse.ci[0].processed && retryCounter-- > 0)
                     {
-                        AsyncCommisionStatusRequestCogisoftModel asyncCogisoftRequest =
-                            new AsyncCommisionStatusRequestCogisoftModel(
-                                commisionIdentifier);
+                        Thread.Sleep(5000);
 
                         asyncResponse =
                             client.PerformRequestReceiveResponse<AsyncCommisionStatusRequestCogisoftModel,
                                 AsyncProcessingResultResponseCogisoftModel>(asyncCogisoftRequest);
-                    } while (!asyncResponse.ci[0].processed && retryCounter-- > 0);
+                    };
 
                     if (!asyncResponse.ci[0].processed)
                     {
