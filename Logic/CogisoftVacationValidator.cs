@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Vacations.IntegratedVacationBalances;
 using EmploApiSDK.ApiModels.Vacations.IntegratedVacationValidation;

@@ -70,12 +70,41 @@ namespace CogisoftConnector.Logic
 
         #region GetVacationDataLogic
 
-        private async Task SyncVacationDataInternal(DateTime synchronizationTime, List<string> employeeIdentifiers = null)
+        public async Task SyncVacationDataInternal(DateTime synchronizationTime, List<string> employeeIdentifiers = null)
         {
             List<IntegratedVacationsBalanceDtoWrapper> vacationData;
-            using (var client = new CogisoftServiceClient(_logger))
+
+            bool mockMode;
+            if(bool.TryParse(ConfigurationManager.AppSettings["MockMode"], out mockMode) && mockMode)
             {
-                vacationData = GetVacationDataRecursive(new QueryParameters(), client, employeeIdentifiers);
+                if (employeeIdentifiers != null)
+                {
+                    vacationData = employeeIdentifiers.Select(ei => new IntegratedVacationsBalanceDtoWrapper()
+                    {
+                        MissingData = false,
+                        Result = new IntegratedVacationsBalanceDto()
+                        {
+                            ExternalEmployeeId = ei,
+                            OnDemandDays = -1,
+                            OutstandingDays = -1,
+                            OutstandingHours = -1,
+                            AvailableHours = -1,
+                            AvailableDays = -1,
+                            ExternalVacationTypeId = (new QueryParameters()).DefaultExternalVacationTypeId
+                        }
+                    }).ToList();
+                }
+                else
+                {
+                    return;
+                }
+            }
+            else
+            {
+                using (var client = new CogisoftServiceClient(_logger))
+                {
+                    vacationData = GetVacationDataRecursive(new QueryParameters(), client, employeeIdentifiers);
+                }
             }
 
             foreach (var dataChunk in vacationData.Where(vd => !vd.MissingData).Chunk(100).ToList())

@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -74,6 +75,12 @@ namespace CogisoftConnector.Logic
 
         public HttpResponseMessage PerformSynchronousCancellation(VacationWebhookErrorRecoveryModel emploRequest)
         {
+            bool mockMode;
+            if (bool.TryParse(ConfigurationManager.AppSettings["MockMode"], out mockMode) && mockMode)
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            }
+
             using (var client = new CogisoftServiceClient(_logger))
             {
                 GetVacationRequestByIdCogisoftModel checkIfVacationExistsRequest = new GetVacationRequestByIdCogisoftModel(
