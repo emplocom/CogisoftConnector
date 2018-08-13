@@ -177,7 +177,7 @@ namespace CogisoftConnector.Controllers
         public HttpResponseMessage CheckAsyncOperationState(string commisionIdentifier, OperationType operationType, string externalEmployeeIdentifier, string externalVacationTypeIdentifier, bool hasManagedVacationDaysBalance)
         {
             _logger.WriteLine($"Webhook status check, Commission Id: {commisionIdentifier}, Operation type: {operationType}, External employee identifier: {externalEmployeeIdentifier}, External vacation type identifier {externalVacationTypeIdentifier}, HasManagedVacationDaysBalance: {hasManagedVacationDaysBalance}");
-
+            throw new HttpResponseException(BuildErrorResponseFromException(new Exception()));
             try
             {
                 var result = _cogisoftWebhookLogic.CheckAsyncOperationState(commisionIdentifier);
@@ -264,6 +264,31 @@ namespace CogisoftConnector.Controllers
 
                 _logger.WriteLine($"Vacation request validation response: {JsonConvert.SerializeObject(response)}");
                 return response;
+            }
+            catch (Exception e)
+            {
+                throw new HttpResponseException(BuildErrorResponseFromException(e));
+            }
+        }
+
+        /// <summary>
+        /// Endpoint listening for vacation status change event in emplo
+        /// </summary>
+        [HttpPost]
+        public HttpResponseMessage VacationWebhookErrorRecovery([FromBody] VacationWebhookErrorRecoveryModel model)
+        {
+            _logger.WriteLine($"Action received: VacationWebhookErrorRecovery, {JsonConvert.SerializeObject(model)}");
+            return new HttpResponseMessage(HttpStatusCode.OK);
+            try
+            {
+                var result = _cogisoftWebhookLogic.PerformSynchronousCancellation(model);
+
+                if (model.HasManagedVacationDaysBalance)
+                {
+                    _cogisoftSyncVacationDataLogic.SyncVacationData(model.ExternalEmployeeId.AsList());
+                }
+
+                return result;
             }
             catch (Exception e)
             {

@@ -168,9 +168,11 @@
     <Compile Include="Logic\EnumerableUtils.cs" />
     <Compile Include="Logic\ICogisoftVacationValidationLogic.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\GetEmployeeDataRequestCogisoftModel.cs" />
+    <Compile Include="Models\Cogisoft\CogisoftRequestModels\GetVacationRequestByIdCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\TestConnectionRequestCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftResponseModels\GetEmployeeCalendarForPeriodResponseCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftResponseModels\GetEmployeeDataResponseCogisoftModel.cs" />
+    <Compile Include="Models\Cogisoft\CogisoftResponseModels\GetVacationRequestByIdResponseCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftResponseModels\TestConnectionResponseCogisoftModel.cs" />
     <Compile Include="Logic\IntegratedVacationsBalanceDtoWrapper.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\AsyncCommisionStatusRequestCogisoftModel.cs" />

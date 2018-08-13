@@ -25,7 +25,7 @@ namespace CogisoftConnector.Controllers
         /// Should be run periodically by a scheduler.
         /// </summary>
         [HttpGet]
-        public HttpResponseMessage SynchronizeVacationDays([FromUri] string listOfIds = "")
+        public HttpResponseMessage SynchronizeVacationDays([FromUri] string listOfIds = "", [FromUri] string vacationTypeIdentifier = "")
         {
             if (listOfIds.IsEmpty())
             {

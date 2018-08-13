@@ -1,3 +1,6 @@
+using System;
+using System.Net;
+using System.Net.Http;
 using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Vacations.IntegratedVacationWebhooks.RequestModels;
@@ -65,6 +68,77 @@ namespace CogisoftConnector.Logic
                         AsyncCommisionResponseCogisoftModel>(cogisoftRequest);
 
                 return response.commision[0].ToString();
+            }
+        }
+
+        public HttpResponseMessage PerformSynchronousCancellation(VacationWebhookErrorRecoveryModel emploRequest)
+        {
+            using (var client = new CogisoftServiceClient(_logger))
+            {
+                GetVacationRequestByIdCogisoftModel checkIfVacationExistsRequest = new GetVacationRequestByIdCogisoftModel(
+                    emploRequest.ExternalVacationId
+                );
+
+                var checkIfVacationExistsResponse =
+                    client.PerformRequestReceiveResponse<GetVacationRequestByIdCogisoftModel,
+                        GetVacationRequestByIdResponseCogisoftModel>(checkIfVacationExistsRequest);
+
+                if (checkIfVacationExistsResponse.VacationRequestExists())
+                {
+                    VacationCancelledRequestCogisoftModel cogisoftRequest = new VacationCancelledRequestCogisoftModel(
+                        emploRequest.ExternalVacationId
+                    );
+
+                    var response =
+                        client.PerformRequestReceiveResponse<VacationCancelledRequestCogisoftModel,
+                            AsyncCommisionResponseCogisoftModel>(cogisoftRequest);
+
+                    var commisionIdentifier = response.commision[0].ToString();
+
+
+                    AsyncProcessingResultResponseCogisoftModel asyncResponse = null;
+
+                    int retryCounter = 10;
+                    do
+                    {
+                        AsyncCommisionStatusRequestCogisoftModel asyncCogisoftRequest =
+                            new AsyncCommisionStatusRequestCogisoftModel(
+                                commisionIdentifier);
+
+                        asyncResponse =
+                            client.PerformRequestReceiveResponse<AsyncCommisionStatusRequestCogisoftModel,
+                                AsyncProcessingResultResponseCogisoftModel>(asyncCogisoftRequest);
+                    } while (!asyncResponse.ci[0].processed && retryCounter-- > 0);
+
+                    if (!asyncResponse.ci[0].processed)
+                    {
+                        throw new Exception("The operation didn't finish in time");
+                    }
+                    else if (asyncResponse.ci[0].code != 0)
+                    {
+                        throw new Exception("An error occurred during request processing by the external system, error code: " + asyncResponse.ci[0].code);
+                    }
+                    else
+                    {
+                        checkIfVacationExistsResponse =
+                            client.PerformRequestReceiveResponse<GetVacationRequestByIdCogisoftModel,
+                                GetVacationRequestByIdResponseCogisoftModel>(checkIfVacationExistsRequest);
+
+                        if (!checkIfVacationExistsResponse.VacationRequestExists())
+                        {
+                            _logger.WriteLine($"Request deletion successful");
+                            return new HttpResponseMessage(HttpStatusCode.OK);
+                        }
+                        else
+                        {
+                            throw new Exception("Request deletion failed");
+                        }
+                    }
+                }
+                else
+                {
+                    return new HttpResponseMessage(HttpStatusCode.OK);
+                }
             }
         }
 
