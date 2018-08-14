@@ -73,7 +73,7 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        public HttpResponseMessage PerformSynchronousCancellation(VacationWebhookErrorRecoveryModel emploRequest)
+        public HttpResponseMessage PerformSynchronousCancellation(string vacationRequestId)
         {
             bool mockMode;
             if (bool.TryParse(ConfigurationManager.AppSettings["MockMode"], out mockMode) && mockMode)
@@ -84,7 +84,7 @@ namespace CogisoftConnector.Logic
             using (var client = new CogisoftServiceClient(_logger))
             {
                 GetVacationRequestByIdCogisoftModel checkIfVacationExistsRequest = new GetVacationRequestByIdCogisoftModel(
-                    emploRequest.ExternalVacationId
+                    vacationRequestId
                 );
 
                 var checkIfVacationExistsResponse =
@@ -94,7 +94,7 @@ namespace CogisoftConnector.Logic
                 if (checkIfVacationExistsResponse.VacationRequestExists())
                 {
                     VacationCancelledRequestCogisoftModel cogisoftRequest = new VacationCancelledRequestCogisoftModel(
-                        emploRequest.ExternalVacationId
+                        vacationRequestId
                     );
 
                     var response =

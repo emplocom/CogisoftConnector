@@ -281,7 +281,12 @@ namespace CogisoftConnector.Controllers
             //return new HttpResponseMessage(HttpStatusCode.OK);
             try
             {
-                var result = _cogisoftWebhookLogic.PerformSynchronousCancellation(model);
+                var result = new HttpResponseMessage(HttpStatusCode.OK);
+
+                if (model.ExternalVacationId != null && !model.ExternalVacationId.Equals(string.Empty))
+                {
+                    result = _cogisoftWebhookLogic.PerformSynchronousCancellation(model.ExternalVacationId);
+                }
 
                 if (model.HasManagedVacationDaysBalance)
                 {
