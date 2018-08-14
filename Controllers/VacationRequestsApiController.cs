@@ -83,28 +83,42 @@ namespace CogisoftConnector.Controllers
 
             try
             {
-                var response =
-                    new HttpResponseMessage(HttpStatusCode.Accepted);
-
-                var commisionId = _cogisoftWebhookLogic.SendVacationEditedRequest(model);
-
-                var url = this.Url.Link("DefaultApi",
-                    new
+                if (model.Status == VacationStatusEnum.Canceled
+                    || model.Status == VacationStatusEnum.Removed
+                    || model.Status == VacationStatusEnum.Rejected)
+                {
+                    _logger.WriteLine($"Webhook VacationUpdated ignored: vacation with this status no longer exists in the Cogisoft system");
+                    if (model.HasManagedVacationDaysBalance)
                     {
-                        Controller = "VacationRequestsApi",
-                        Action = "CheckAsyncOperationState",
-                        commisionIdentifier = commisionId,
-                        operationType = OperationType.Update,
-                        externalEmployeeIdentifier = model.ExternalEmployeeId,
-                        externalVacationTypeIdentifier = model.ExternalVacationTypeId,
-                        hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
-                    });
+                        _cogisoftSyncVacationDataLogic.SyncVacationData(model.ExternalEmployeeId.AsList());
+                    }
+                    return new HttpResponseMessage(HttpStatusCode.OK);
+                }
+                else
+                {
+                    var response =
+                        new HttpResponseMessage(HttpStatusCode.Accepted);
 
-                response.Content = new StringContent(string.Empty);
-                response.Content.Headers.ContentLocation = new Uri(url);
+                    var commisionId = _cogisoftWebhookLogic.SendVacationEditedRequest(model);
 
-                _logger.WriteLine($"Webhook VacationUpdated response: {JsonConvert.SerializeObject(response)}");
-                return response;
+                    var url = this.Url.Link("DefaultApi",
+                        new
+                        {
+                            Controller = "VacationRequestsApi",
+                            Action = "CheckAsyncOperationState",
+                            commisionIdentifier = commisionId,
+                            operationType = OperationType.Update,
+                            externalEmployeeIdentifier = model.ExternalEmployeeId,
+                            externalVacationTypeIdentifier = model.ExternalVacationTypeId,
+                            hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
+                        });
+
+                    response.Content = new StringContent(string.Empty);
+                    response.Content.Headers.ContentLocation = new Uri(url);
+
+                    _logger.WriteLine($"Webhook VacationUpdated response: {JsonConvert.SerializeObject(response)}");
+                    return response;
+                }
             }
             catch (Exception e)
             {
