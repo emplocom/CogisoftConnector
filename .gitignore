@@ -27,3 +27,8 @@ TMSImageService/imagecache
 /TMS/Content/tms/_css/tms2.min.css
 IdentityServer/.vs/config/applicationhost.config
 /packages
+/.vs/CogisoftConnector/DesignTimeBuild/.dtbcache
+/.vs/CogisoftConnector/v15/Server/sqlite3/db.lock
+/.vs/CogisoftConnector/v15/Server/sqlite3/storage.ide
+/.vs/CogisoftConnector/v15/Server/sqlite3/storage.ide-shm
+/.vs/CogisoftConnector/v15/Server/sqlite3/storage.ide-wal

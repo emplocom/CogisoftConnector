@@ -7,9 +7,10 @@ using System.Threading.Tasks;
 using System.Web.WebPages;
 using CogisoftConnector.Models.Cogisoft.CogisoftRequestModels;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
-using EmploApiSDK.ApiModels.IntegratedVacations;
+using EmploApiSDK.ApiModels.Vacations.IntegratedVacationBalances;
 using EmploApiSDK.Client;
 using EmploApiSDK.Logger;
+using Hangfire;
 using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
@@ -33,105 +34,201 @@ namespace CogisoftConnector.Logic
             _apiClient = new ApiClient(_logger, _apiConfiguration);
         }
 
-        private async Task SyncVacationDataRecursive(CogisoftServiceClient client, string externalVacationTypeIdentifier, int retryCounter = 0, List<string> employeeIds = null, bool withRepeatedFirstCogisoftQuery = false)
+        public IntegratedVacationsBalanceDto GetVacationDataForSingleEmployee(string employeeIdentifier, string externalVacationTypeId)
         {
-            if (employeeIds != null)
-            {
-                _logger.WriteLine($"SyncVacationData started for employees: {string.Join(", ", employeeIds)}");
-            }
-            else
-            {
-                employeeIds = new List<string>();
-                _logger.WriteLine($"SyncVacationData started for all employees");
-            }
-            _logger.WriteLine($"SyncVacationData retry counter: {retryCounter}");
-
-            GetVacationDataRequestCogisoftModel requestCogisoftRequest = new GetVacationDataRequestCogisoftModel(employeeIds);
-
-            List<IntegratedVacationsBalanceDtoWrapper> employeeVacationDataModels = new List<IntegratedVacationsBalanceDtoWrapper>();
-            bool anyObjectsLeft;
+            int counter = 0;
+            IntegratedVacationsBalanceDtoWrapper balance;
 
             do
             {
-                var response =
-                    client.PerformRequestReceiveResponse<GetVacationDataRequestCogisoftModel,
-                        VacationDataResponseCogisoftModel>(requestCogisoftRequest);
+                balance = GetVacationData(employeeIdentifier.AsList(), externalVacationTypeId).First();
+            } while (counter < int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]) && balance != null && balance.MissingData);
 
-                employeeVacationDataModels.AddRange(response.GetVacationDataCollection()
-                    .Select(r => new IntegratedVacationsBalanceDtoWrapper(r, externalVacationTypeIdentifier)));
+            if (balance == null || balance.MissingData)
+            {
+                throw new Exception("Nie uda³o siê pobraæ balansu urlopowego dla pracownika.");
+            }
+            else
+            {
+                return balance.Result;
+            }
+        }
 
-                anyObjectsLeft = response.AnyRemainingObjectsLeft();
+        public void SyncVacationData(DateTime synchronizationTime, string externalVacationTypeId, List<string> employeeIdentifiers = null)
+        {
+            _logger.WriteLine($"Vacation data synchronization for employees {(employeeIdentifiers == null ? string.Empty : string.Join(",", employeeIdentifiers))} will be performed in {double.Parse(ConfigurationManager.AppSettings["EmployeeVacationBalanceSynchronizationDelay_ms"]) / 60000} minutes");
+            var jobId = BackgroundJob.Schedule(
+                () => SyncVacationDataInternal(synchronizationTime, externalVacationTypeId, employeeIdentifiers, 0),
+                TimeSpan.FromMilliseconds(int.Parse(ConfigurationManager.AppSettings["EmployeeVacationBalanceSynchronizationDelay_ms"])));
+        }
 
-                requestCogisoftRequest.IncrementQueryIndex();
-            } while (anyObjectsLeft);
+        #region GetVacationDataLogic
 
-            if (employeeVacationDataModels.Any(m => !m.MissingData))
+        public async Task SyncVacationDataInternal(DateTime synchronizationTime, string externalVacationTypeId, List<string> employeeIdentifiers, int counter = 0)
+        {
+            bool mockMode;
+            if (bool.TryParse(ConfigurationManager.AppSettings["MockMode"], out mockMode) && mockMode &&
+                employeeIdentifiers != null)
+            {
+                await Import(synchronizationTime, employeeIdentifiers.Select(ei =>
+                    new IntegratedVacationsBalanceDtoWrapper()
+                    {
+                        MissingData = false,
+                        Result = new IntegratedVacationsBalanceDto()
+                        {
+                            ExternalEmployeeId = ei,
+                            OnDemandDays = -1,
+                            OutstandingDays = -1,
+                            OutstandingHours = -1,
+                            AvailableHours = -1,
+                            AvailableDays = -1,
+                            ExternalVacationTypeId = externalVacationTypeId
+                        }
+                    }).ToList());
+                return;
+            }
+
+
+            if (counter == 0)
+            {
+                //The first request might provide us with outdated data.
+                //That's why we're triggering data recalculation with the first request to Cogisoft.
+                _logger.WriteLine(
+                    $"Triggering data recalculation in Cogisoft system with a fire-and-forget request");
+
+                GetVacationData(employeeIdentifiers, externalVacationTypeId);
+
+                _logger.WriteLine(
+                    $"Cogisoft query for recalculated data will be performed in {GetOperationDelay(employeeIdentifiers).TotalSeconds} seconds");
+
+                var closureSecureCounter = counter + 1;
+                var jobId = BackgroundJob.Schedule(
+                    () => SyncVacationDataInternal(synchronizationTime, externalVacationTypeId, employeeIdentifiers, closureSecureCounter),
+                    GetOperationDelay(employeeIdentifiers));
+
+                return;
+            }
+            else if (counter >= int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]))
+            {
+                if (employeeIdentifiers != null && employeeIdentifiers.Any())
+                {
+                    _logger.WriteLine(
+                        $"Maximum retry count ({int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"])}) exceeded for employees:",
+                        LogLevelEnum.Error);
+                    _logger.WriteLine(
+                        string.Join(", ", employeeIdentifiers), LogLevelEnum.Error);
+
+                    return;
+                }
+                else
+                {
+                    _logger.WriteLine(
+                        $"Maximum retry count ({int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"])}) exceeded for all employees.",
+                        LogLevelEnum.Error);
+
+                    return;
+                }
+            }
+
+            var vacationData = GetVacationData(employeeIdentifiers, externalVacationTypeId);
+
+            if (vacationData.Any(vd => !vd.MissingData))
+            {
+                await Import(synchronizationTime, vacationData);
+            }
+
+            var missingData = vacationData.Where(vd => vd.MissingData).ToList();
+
+            if (missingData.Any())
+            {
+                _logger.WriteLine(
+                    $"Cogisoft query for missing data will be performed in {GetOperationDelay(missingData).TotalSeconds} seconds");
+
+                var closureSecureCounter = counter + 1;
+                var jobId = BackgroundJob.Schedule(
+                    () => SyncVacationDataInternal(synchronizationTime, externalVacationTypeId, missingData.Select(md => md.Result.ExternalEmployeeId).ToList(), closureSecureCounter),
+                    GetOperationDelay(missingData));
+            }
+        }
+
+
+        private List<IntegratedVacationsBalanceDtoWrapper> GetVacationData(List<string> employeeIdentifiers, string externalVacationTypeId)
+        {
+            GetVacationDataRequestCogisoftModel cogisoftRequest = new GetVacationDataRequestCogisoftModel(employeeIdentifiers);
+            List<IntegratedVacationsBalanceDtoWrapper> modelsQueryResult = new List<IntegratedVacationsBalanceDtoWrapper>();
+
+            if (employeeIdentifiers != null && employeeIdentifiers.Any())
+            {
+                _logger.WriteLine($"GetVacationData started for employees: {string.Join(", ", employeeIdentifiers)}");
+            }
+            else
+            {
+                _logger.WriteLine($"GetVacationData started for all employees");
+            }
+
+            using (var client = new CogisoftServiceClient(_logger))
+            {
+                bool anyObjectsLeft;
+                do
+                {
+                    var response =
+                        client.PerformRequestReceiveResponse<GetVacationDataRequestCogisoftModel,
+                            VacationDataResponseCogisoftModel>(cogisoftRequest);
+
+                    anyObjectsLeft = response.AnyRemainingObjectsLeft();
+
+                    cogisoftRequest.IncrementQueryIndex();
+
+                    modelsQueryResult.AddRange(response.GetVacationDataCollection()
+                        .Select(r => new IntegratedVacationsBalanceDtoWrapper(r, externalVacationTypeId)));
+                } while (anyObjectsLeft);
+            }
+
+            return modelsQueryResult;
+        }
+
+        private TimeSpan GetOperationDelay<T>(List<T> employeeIdentifiers)
+        {
+            int multiplier = 0;
+
+            if (employeeIdentifiers == null || !employeeIdentifiers.Any())
+            {
+                multiplier = int.Parse(ConfigurationManager.AppSettings["CogisoftQueryPageSize"]);
+            }
+            else
+            {
+                multiplier = employeeIdentifiers.Count;
+            }
+
+            return TimeSpan.FromMilliseconds(
+                int.Parse(ConfigurationManager.AppSettings["GetVacationDataRetryInterval_ms"]) + 500 * multiplier);
+        }
+
+        #endregion
+
+        #region ImportLogic
+
+        private async Task Import(DateTime synchronizationTimestamp, List<IntegratedVacationsBalanceDtoWrapper> employeeVacationDataModels)
+        {
+            foreach (var importDataChunk in employeeVacationDataModels.Where(m => !m.MissingData).Chunk(100))
             {
                 var request = JsonConvert.SerializeObject(
                     new ImportIntegratedVacationsBalanceDataRequestModel
                     {
-                        BalanceList = employeeVacationDataModels.Where(m => !m.MissingData).Select(m => m.Result).ToList()
+                        SynchronizationTime = synchronizationTimestamp,
+                        BalanceList = importDataChunk.Select(m => m.Result).ToList()
                     });
 
-                if (withRepeatedFirstCogisoftQuery)
-                {
-                    //The first request might provide us with outdated data while triggering data recalculation in Cogisoft
-                    Thread.Sleep(int.Parse(ConfigurationManager.AppSettings["GetVacationDataRetryInterval_ms"]));
+                var response = await _apiClient
+                    .SendPostAsync<ImportIntegratedVacationsBalanceDataResponseModel>(
+                        request, _apiConfiguration.ImportIntegratedVacationsBalanceDataUrl);
 
-                    request = JsonConvert.SerializeObject(
-                        new ImportIntegratedVacationsBalanceDataRequestModel
-                        {
-                            BalanceList = employeeVacationDataModels.Where(m => !m.MissingData).Select(m => m.Result).ToList()
-                        });
-                }
+                response.resultRows = response.resultRows.OrderBy(r => r.ExternalEmployeeId).ToList();
 
-                bool dryRun;
-                if (bool.TryParse(ConfigurationManager.AppSettings["DryRun"], out dryRun) && dryRun)
-                {
+                response.resultRows.ForEach(r =>
                     _logger.WriteLine(
-                        "Importer is in DryRun mode, data retrieved from Cogisoft will be printed to log, but it won't be sent to emplo.");
-                    _logger.WriteLine(request);
-                }
-                else
-                {
-                    var response = await _apiClient
-                        .SendPostAsync<ImportIntegratedVacationsBalanceDataResponseModel>(
-                            request, _apiConfiguration.ImportIntegratedVacationsBalanceDataUrl);
-
-                    response.resultRows = response.resultRows.OrderBy(r => r.ExternalEmployeeId).ToList();
-
-                    response.resultRows.ForEach(r =>
-                        _logger.WriteLine(
-                            $"Employee Id: {r.ExternalEmployeeId}, Import result status: [{r.OperationStatus.ToString()}]{(r.Message.IsEmpty() ? string.Empty : $", Message: {r.Message}")}",
-                            MapImportStatusToLogLevel(r.OperationStatus)));
-                }
-            }
-
-            if (employeeVacationDataModels.Any(m => m.MissingData))
-            {
-                if (retryCounter < int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]))
-                {
-                    Thread.Sleep(int.Parse(ConfigurationManager.AppSettings["GetVacationDataRetryInterval_ms"]));
-
-                    retryCounter++;
-                    await employeeVacationDataModels.Where(m => m.MissingData)
-                        .Select(m => m.Result.ExternalEmployeeId)
-                        .Chunk(int.Parse(ConfigurationManager.AppSettings["CogisoftQueryPageSize"]))
-                        .ToList().ForEachAsync(
-                            async employeeIdsChunk =>
-                                await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, retryCounter,
-                                    employeeIdsChunk.ToList()));
-                }
-                else
-                {
-                    _logger.WriteLine(
-                        $"Maximum retry count ({ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]}) exceeded for employees:",
-                        LogLevelEnum.Error);
-                    _logger.WriteLine(
-                        string.Join(", ",
-                            employeeVacationDataModels.Where(m => m.MissingData)
-                                .Select(m => m.Result.ExternalEmployeeId).ToList()), LogLevelEnum.Error);
-                }
+                        $"Employee Id: {r.ExternalEmployeeId}, Import result status: [{r.OperationStatus.ToString()}]{(r.Message.IsEmpty() ? string.Empty : $", Message: {r.Message}")}",
+                        MapImportStatusToLogLevel(r.OperationStatus)));
             }
         }
 
@@ -148,59 +245,6 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        private async Task SyncVacationData(string externalVacationTypeIdentifier, List<string> employeeIds = null, bool withRepeatedFirstCogisoftQuery = false)
-        {
-            try
-            {
-                using (var client = new CogisoftServiceClient(_logger))
-                {
-                    if (employeeIds == null || !employeeIds.Any())
-                    {
-                        await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, 0,
-                            null, withRepeatedFirstCogisoftQuery);
-                    }
-                    else
-                    {
-                        await employeeIds
-                            .Chunk(int.Parse(ConfigurationManager.AppSettings["CogisoftQueryPageSize"]))
-                            .ToList().ForEachAsync(async employeeIdsChunk =>
-                                await SyncVacationDataRecursive(client, externalVacationTypeIdentifier, 0,
-                                    employeeIdsChunk.ToList(), withRepeatedFirstCogisoftQuery));
-                    }
-
-
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.WriteLine($"An unexpected error occurred, exception: {ExceptionLoggingUtils.ExceptionAsString(e)}", LogLevelEnum.Error);
-            }
-        }
-
-        private async Task SyncVacationDataForSingleEmployeeWithDelay(string externalVacationTypeIdentifier,
-            string employeeIdentifier)
-        {
-            Thread.Sleep(int.Parse(ConfigurationManager.AppSettings["EmployeeVacationBalanceSynchronizationDelay_ms"]));
-            await SyncVacationData(externalVacationTypeIdentifier, new List<string>() {employeeIdentifier}, true);
-        }
-
-        public void SyncVacationDataForSingleEmployee(string externalVacationTypeIdentifier, string employeeIdentifier)
-        {
-            Task.Run(() =>
-                SyncVacationDataForSingleEmployeeWithDelay(externalVacationTypeIdentifier, employeeIdentifier)
-            );
-        }
-
-        public async Task SyncVacationData(List<string> employeeIdentifiers = null)
-        {
-            if (employeeIdentifiers == null || !employeeIdentifiers.Any())
-            {
-                await SyncVacationData(ConfigurationManager.AppSettings["DefaultVacationTypeIdForSynchronization"]);
-            }
-            else
-            {
-                await SyncVacationData(ConfigurationManager.AppSettings["DefaultVacationTypeIdForSynchronization"], employeeIdentifiers);
-            }
-        }
+        #endregion
     }
 }

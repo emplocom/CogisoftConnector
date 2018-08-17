@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Web.WebPages;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
-using EmploApiSDK.ApiModels.IntegratedVacations;
+using EmploApiSDK.ApiModels.Vacations.IntegratedVacationBalances;
 
 namespace CogisoftConnector.Logic
 {
@@ -10,6 +10,11 @@ namespace CogisoftConnector.Logic
     {
         public IntegratedVacationsBalanceDto Result { get; set; }
         public bool MissingData { get; set; }
+
+        public IntegratedVacationsBalanceDtoWrapper()
+        {
+
+        }
 
         public IntegratedVacationsBalanceDtoWrapper(VacationDataResponseCogisoftModel.R employeeResponseCollection, string externalVacationTypeId)
         {
@@ -24,34 +29,73 @@ namespace CogisoftConnector.Logic
                 return;
             }
 
-            Result.AvailableDays =
-                ParseAndConvertDays(employeeResponseCollection.sc[1].ToString(), Result.ExternalEmployeeId);
-
-            Result.AvailableHours = ParseAndConvertHours(employeeResponseCollection.sc[2].ToString(), Result.ExternalEmployeeId);
+            var calculatedHoursInAWorkday = 
+                CalculateHoursInAWorkday(
+                    employeeResponseCollection.sc[1].ToString(), 
+                    employeeResponseCollection.sc[2].ToString(), 
+                    Result.ExternalEmployeeId, 
+                    out Result.AvailableDays, 
+                    out Result.AvailableHours);
 
             Result.OutstandingDays =
-                ParseAndConvertDays(employeeResponseCollection.sc[3].ToString(), Result.ExternalEmployeeId);
+                ParseAndConvertDays(employeeResponseCollection.sc[3].ToString(), Result.ExternalEmployeeId, calculatedHoursInAWorkday);
 
             Result.OutstandingHours = ParseAndConvertHours(employeeResponseCollection.sc[4].ToString(), Result.ExternalEmployeeId);
 
             Result.OnDemandDays =
-                ParseAndConvertDays(employeeResponseCollection.sc[5].ToString(), Result.ExternalEmployeeId);
+                ParseAndConvertDays(employeeResponseCollection.sc[5].ToString(), Result.ExternalEmployeeId, calculatedHoursInAWorkday);
         }
 
-        private decimal ParseAndConvertDays(string days, string externalEmployeeId)
+        private decimal ParseAndConvertDays(string days, string externalEmployeeId, decimal? hoursInAWorkday = null)
         {
-            //we can get days in the "24d 4:00" format - only the whole day part interests us
+            //we can get days in the "24d 4:00" format
             int indexOfD = days.IndexOf("d", StringComparison.Ordinal);
-            var onlyDaysString = indexOfD == -1 ? days : days.Substring(0, indexOfD);
+            var daysComponent = indexOfD == -1 ? days : days.Substring(0, indexOfD);
 
             decimal parsedDays;
 
-            if (!decimal.TryParse(onlyDaysString, out parsedDays))
+            if (!decimal.TryParse(daysComponent, out parsedDays))
             {
-                throw new Exception($"Could not parse days. Days' string: {onlyDaysString}, full string: {days}, External employee Id: {externalEmployeeId}");
+                throw new Exception($"Could not parse days. Days' string: {daysComponent}, full string: {days}, External employee Id: {externalEmployeeId}");
             }
 
-            return parsedDays;
+            if (indexOfD == -1 || !hoursInAWorkday.HasValue)
+            {
+                return parsedDays;
+            }
+
+            var timeComponent = days.Replace(daysComponent + "d", string.Empty).Trim();
+
+            var parsedTimeComponent = ParseAndConvertHours(timeComponent, externalEmployeeId);
+
+            return parsedDays + (parsedTimeComponent / hoursInAWorkday.Value);
+        }
+
+        private decimal? CalculateHoursInAWorkday(string availableDays, string availableHours, string externalEmployeeId, out decimal parsedDays, out decimal parsedHours)
+        {
+            int indexOfD = availableDays.IndexOf("d", StringComparison.Ordinal);
+            var daysComponent = indexOfD == -1 ? availableDays : availableDays.Substring(0, indexOfD);
+            decimal parsedTimeComponent = 0;
+
+            parsedHours = ParseAndConvertHours(availableHours, Result.ExternalEmployeeId);
+
+            if (!decimal.TryParse(daysComponent, out parsedDays))
+            {
+                throw new Exception($"Could not parse days. Days' string: {daysComponent}, full string: {availableDays}, External employee Id: {externalEmployeeId}");
+            }
+
+            if (indexOfD != -1 && parsedDays != 0)
+            {
+                var timeComponent = availableDays.Replace(daysComponent + "d", string.Empty).Trim();
+                parsedTimeComponent = ParseAndConvertHours(timeComponent, externalEmployeeId);
+                var hoursInAWorkday = (parsedHours - parsedTimeComponent) / parsedDays;
+                parsedDays = parsedDays + (parsedTimeComponent / hoursInAWorkday);
+                return hoursInAWorkday;
+            }
+            else
+            {
+                return null;
+            }
         }
 
         private decimal ParseAndConvertHours(string hours, string externalEmployeeId)

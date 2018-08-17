@@ -3,11 +3,10 @@ using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.WebPages;
 using CogisoftConnector.Logic;
-using EmploApiSDK.Logger;
+using Hangfire;
 
 namespace CogisoftConnector.Controllers
 {
@@ -15,10 +14,9 @@ namespace CogisoftConnector.Controllers
     {
         CogisoftSyncVacationDataLogic _cogisoftSyncVacationDataLogic;
 
-        public VacationBalanceApiController()
+        public VacationBalanceApiController(CogisoftSyncVacationDataLogic cogisoftSyncVacationDataLogic)
         {
-            ILogger logger = LoggerFactory.CreateLogger(null);
-            _cogisoftSyncVacationDataLogic = new CogisoftSyncVacationDataLogic(logger);
+            _cogisoftSyncVacationDataLogic = cogisoftSyncVacationDataLogic;
         }
 
         /// <summary>
@@ -27,15 +25,17 @@ namespace CogisoftConnector.Controllers
         /// Should be run periodically by a scheduler.
         /// </summary>
         [HttpGet]
-        public async Task<HttpResponseMessage> SynchronizeVacationDays([FromUri] string listOfIds = "")
+        public HttpResponseMessage SynchronizeVacationDays([FromUri] string listOfIds = "", [FromUri] string vacationTypeIdentifier = "")
         {
+            var externalVacationTypeId = vacationTypeIdentifier == string.Empty ? ConfigurationManager.AppSettings["DefaultVacationTypeIdForSynchronization"] : vacationTypeIdentifier;
+
             if (listOfIds.IsEmpty())
             {
-                await _cogisoftSyncVacationDataLogic.SyncVacationData();
+                _cogisoftSyncVacationDataLogic.SyncVacationData(DateTime.UtcNow, externalVacationTypeId);
             }
             else
             {
-                await _cogisoftSyncVacationDataLogic.SyncVacationData(listOfIds.Split(',').ToList());
+                _cogisoftSyncVacationDataLogic.SyncVacationData(DateTime.UtcNow, externalVacationTypeId, listOfIds.Split(',').ToList());
             }
 
             return new HttpResponseMessage(HttpStatusCode.OK);

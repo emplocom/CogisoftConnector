@@ -4,7 +4,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using CogisoftConnector.Logic;
-using EmploApiSDK.Logger;
 
 namespace CogisoftConnector.Controllers
 {
@@ -12,10 +11,9 @@ namespace CogisoftConnector.Controllers
     {
         private readonly ConfigurationTestLogic _configurationTestLogic;
 
-        public ConfigurationTestApiController()
+        public ConfigurationTestApiController(ConfigurationTestLogic configurationTestLogic)
         {
-            ILogger logger = LoggerFactory.CreateLogger(null);
-            _configurationTestLogic = new ConfigurationTestLogic(logger);
+            _configurationTestLogic = configurationTestLogic;
         }
 
         /// <summary>

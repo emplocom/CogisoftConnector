@@ -96,5 +96,10 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
         {
             this.qp.q.p.i++;
         }
+
+        public void ResetQueryIndex()
+        {
+            this.qp.q.p.i = 0;
+        }
     }
 }
