@@ -19,7 +19,7 @@ namespace CogisoftConnector.Logic
             _logger = logger;
         }
 
-        public string SendVacationCreatedRequest(VacationCreatedWebhookModel emploRequest)
+        public string SendVacationCreatedRequest(VacationWebhookRequestModel emploRequest)
         {
             using (var client = new CogisoftServiceClient(_logger))
             {
@@ -38,7 +38,7 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        public string SendVacationEditedRequest(VacationEditedWebhookModel emploRequest)
+        public string SendVacationEditedRequest(VacationWebhookRequestModel emploRequest)
         {
             using (var client = new CogisoftServiceClient(_logger))
             {
@@ -57,7 +57,7 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        public string SendVacationCancelledRequest(VacationStatusChangedWebhookModel emploRequest)
+        public string SendVacationCancelledRequest(VacationWebhookRequestModel emploRequest)
         {
             using (var client = new CogisoftServiceClient(_logger))
             {

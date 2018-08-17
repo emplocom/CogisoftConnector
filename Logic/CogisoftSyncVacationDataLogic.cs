@@ -60,11 +60,11 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        public void SyncVacationData(List<string> employeeIdentifiers = null)
+        public void SyncVacationData(DateTime synchronizationTime, List<string> employeeIdentifiers = null)
         {
             _logger.WriteLine($"Vacation data synchronization for employees {(employeeIdentifiers == null ? string.Empty : string.Join(",", employeeIdentifiers))} will be performed in {double.Parse(ConfigurationManager.AppSettings["EmployeeVacationBalanceSynchronizationDelay_ms"]) / 60000} minutes");
             var jobId = BackgroundJob.Schedule(
-                () => SyncVacationDataInternal(DateTime.UtcNow, employeeIdentifiers),
+                () => SyncVacationDataInternal(synchronizationTime, employeeIdentifiers),
                 TimeSpan.FromMilliseconds(int.Parse(ConfigurationManager.AppSettings["EmployeeVacationBalanceSynchronizationDelay_ms"])));
         }
 

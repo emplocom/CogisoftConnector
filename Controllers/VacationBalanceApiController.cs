@@ -29,11 +29,11 @@ namespace CogisoftConnector.Controllers
         {
             if (listOfIds.IsEmpty())
             {
-                _cogisoftSyncVacationDataLogic.SyncVacationData();
+                _cogisoftSyncVacationDataLogic.SyncVacationData(DateTime.UtcNow);
             }
             else
             {
-                _cogisoftSyncVacationDataLogic.SyncVacationData(listOfIds.Split(',').ToList());
+                _cogisoftSyncVacationDataLogic.SyncVacationData(DateTime.UtcNow, listOfIds.Split(',').ToList());
             }
 
             return new HttpResponseMessage(HttpStatusCode.OK);

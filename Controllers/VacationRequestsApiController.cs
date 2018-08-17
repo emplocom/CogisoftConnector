@@ -38,7 +38,7 @@ namespace CogisoftConnector.Controllers
         /// Endpoint listening for vacation creation event in emplo
         /// </summary>
         [HttpPost]
-        public HttpResponseMessage VacationCreated([FromBody] VacationCreatedWebhookModel model)
+        public HttpResponseMessage VacationCreated([FromBody] VacationWebhookRequestModel model)
         {
             _logger.WriteLine($"Webhook received: VacationCreated, {JsonConvert.SerializeObject(model)}");
 
@@ -54,11 +54,7 @@ namespace CogisoftConnector.Controllers
                     {
                         Controller = "VacationRequestsApi",
                         Action = "CheckAsyncOperationState",
-                        commisionIdentifier = commisionId,
-                        operationType = OperationType.Create,
-                        externalEmployeeIdentifier = model.ExternalEmployeeId,
-                        externalVacationTypeIdentifier = model.ExternalVacationTypeId,
-                        hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
+                        commisionIdentifier = commisionId
                     });
 
                 response.Content = new StringContent(string.Empty);
@@ -77,7 +73,7 @@ namespace CogisoftConnector.Controllers
         /// Endpoint listening for vacation update event in emplo
         /// </summary>
         [HttpPost]
-        public HttpResponseMessage VacationUpdated([FromBody] VacationEditedWebhookModel model)
+        public HttpResponseMessage VacationUpdated([FromBody] VacationWebhookRequestModel model)
         {
             _logger.WriteLine($"Webhook received: VacationUpdated, {JsonConvert.SerializeObject(model)}");
 
@@ -90,7 +86,7 @@ namespace CogisoftConnector.Controllers
                     _logger.WriteLine($"Webhook VacationUpdated ignored: vacation with this status no longer exists in the Cogisoft system");
                     if (model.HasManagedVacationDaysBalance)
                     {
-                        _cogisoftSyncVacationDataLogic.SyncVacationData(model.ExternalEmployeeId.AsList());
+                        _cogisoftSyncVacationDataLogic.SyncVacationData(model.OperationTime, model.ExternalEmployeeId.AsList());
                     }
                     return new HttpResponseMessage(HttpStatusCode.OK);
                 }
@@ -106,11 +102,7 @@ namespace CogisoftConnector.Controllers
                         {
                             Controller = "VacationRequestsApi",
                             Action = "CheckAsyncOperationState",
-                            commisionIdentifier = commisionId,
-                            operationType = OperationType.Update,
-                            externalEmployeeIdentifier = model.ExternalEmployeeId,
-                            externalVacationTypeIdentifier = model.ExternalVacationTypeId,
-                            hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
+                            commisionIdentifier = commisionId
                         });
 
                     response.Content = new StringContent(string.Empty);
@@ -130,15 +122,15 @@ namespace CogisoftConnector.Controllers
         /// Endpoint listening for vacation status change event in emplo
         /// </summary>
         [HttpPost]
-        public HttpResponseMessage VacationStatusChanged([FromBody] VacationStatusChangedWebhookModel model)
+        public HttpResponseMessage VacationStatusChanged([FromBody] VacationWebhookRequestModel model)
         {
             _logger.WriteLine($"Webhook received: VacationStatusChanged, {JsonConvert.SerializeObject(model)}");
 
             try
             {
-                if (model.NewStatus == VacationStatusEnum.Canceled
-                    || model.NewStatus == VacationStatusEnum.Removed
-                    || model.NewStatus == VacationStatusEnum.Rejected)
+                if (model.Status == VacationStatusEnum.Canceled
+                    || model.Status == VacationStatusEnum.Removed
+                    || model.Status == VacationStatusEnum.Rejected)
                 {
                     var response =
                         new HttpResponseMessage(HttpStatusCode.Accepted);
@@ -150,11 +142,7 @@ namespace CogisoftConnector.Controllers
                         {
                             Controller = "VacationRequestsApi",
                             Action = "CheckAsyncOperationState",
-                            commisionIdentifier = commisionId,
-                            operationType = OperationType.StatusChanged,
-                            externalEmployeeIdentifier = model.ExternalEmployeeId,
-                            externalVacationTypeIdentifier = model.ExternalVacationTypeId,
-                            hasManagedVacationDaysBalance = model.HasManagedVacationDaysBalance
+                            commisionIdentifier = commisionId
                         });
 
                     response.Content = new StringContent(string.Empty);
@@ -168,7 +156,7 @@ namespace CogisoftConnector.Controllers
                     _logger.WriteLine($"Webhook VacationStatusChanged ignored");
                     if (model.HasManagedVacationDaysBalance)
                     {
-                        _cogisoftSyncVacationDataLogic.SyncVacationData(model.ExternalEmployeeId.AsList());
+                        _cogisoftSyncVacationDataLogic.SyncVacationData(model.OperationTime, model.ExternalEmployeeId.AsList());
                     }
                     return new HttpResponseMessage(HttpStatusCode.OK);
                 }
@@ -183,15 +171,12 @@ namespace CogisoftConnector.Controllers
         /// Returns status of asynchronous request to Cogisoft API
         /// </summary>
         /// <param name="commisionIdentifier">Original request id</param>
-        /// <param name="operationType">Type of request for which the status is checked</param>
-        /// <param name="externalEmployeeIdentifier">Employee id in Cogisoft to be used for vacation days balance update when the operation status is successful</param>
-        /// <param name="externalVacationTypeIdentifier">Vacation type id in Cogisoft to be used for vacation days balance update when the operation status is successful</param>
-        /// <param name="hasManagedVacationDaysBalance">True if vacation days balance should be updated in emplo when the operation status is successful</param>
+        /// <param name="model">Vacation webhook request model</param>
         [HttpPost]
-        public HttpResponseMessage CheckAsyncOperationState(string commisionIdentifier, OperationType operationType, string externalEmployeeIdentifier, string externalVacationTypeIdentifier, bool hasManagedVacationDaysBalance)
+        public HttpResponseMessage CheckAsyncOperationState(string commisionIdentifier, [FromBody] VacationWebhookRequestModel model)
         {
-            _logger.WriteLine($"Webhook status check, Commission Id: {commisionIdentifier}, Operation type: {operationType}, External employee identifier: {externalEmployeeIdentifier}, External vacation type identifier {externalVacationTypeIdentifier}, HasManagedVacationDaysBalance: {hasManagedVacationDaysBalance}");
-            //throw new HttpResponseException(BuildErrorResponseFromException(new Exception()));
+            _logger.WriteLine($"Webhook status check, Commission Id: {commisionIdentifier}, Webhook event: {model.WebhookEvent}, External employee identifier: {model.ExternalEmployeeId}, External vacation type identifier {model.ExternalVacationTypeId}, HasManagedVacationDaysBalance: {model.HasManagedVacationDaysBalance}");
+
             try
             {
                 var result = _cogisoftWebhookLogic.CheckAsyncOperationState(commisionIdentifier);
@@ -206,11 +191,7 @@ namespace CogisoftConnector.Controllers
                         {
                             Controller = "VacationRequestsApi",
                             Action = "CheckAsyncOperationState",
-                            commisionIdentifier,
-                            operationType,
-                            externalEmployeeIdentifier,
-                            externalVacationTypeIdentifier,
-                            hasManagedVacationDaysBalance
+                            commisionIdentifier
                         });
 
                     response.Content = new StringContent(string.Empty);
@@ -226,12 +207,12 @@ namespace CogisoftConnector.Controllers
                         throw new Exception("An error occurred during request processing by the external system, error code: " + result.ci[0].code);
                     }
 
-                    if(hasManagedVacationDaysBalance)
+                    if(model.HasManagedVacationDaysBalance)
                     {
-                        _cogisoftSyncVacationDataLogic.SyncVacationData(externalEmployeeIdentifier.AsList());
+                        _cogisoftSyncVacationDataLogic.SyncVacationData(model.OperationTime, model.ExternalEmployeeId.AsList());
                     }
                     
-                    if (operationType == OperationType.Create)
+                    if (model.WebhookEvent == WebhookEvent.VacationCreated)
                     {
                         var response = new HttpResponseMessage(HttpStatusCode.Created)
                         {
@@ -292,7 +273,7 @@ namespace CogisoftConnector.Controllers
         public HttpResponseMessage VacationWebhookErrorRecovery([FromBody] VacationWebhookErrorRecoveryModel model)
         {
             _logger.WriteLine($"Action received: VacationWebhookErrorRecovery, {JsonConvert.SerializeObject(model)}");
-            //return new HttpResponseMessage(HttpStatusCode.OK);
+
             try
             {
                 var result = new HttpResponseMessage(HttpStatusCode.OK);
@@ -304,7 +285,7 @@ namespace CogisoftConnector.Controllers
 
                 if (model.HasManagedVacationDaysBalance)
                 {
-                    _cogisoftSyncVacationDataLogic.SyncVacationData(model.ExternalEmployeeId.AsList());
+                    _cogisoftSyncVacationDataLogic.SyncVacationData(DateTime.UtcNow, model.ExternalEmployeeId.AsList());
                 }
 
                 return result;
