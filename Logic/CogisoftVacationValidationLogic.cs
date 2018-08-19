@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Threading;
 using System.Threading.Tasks;
 using CogisoftConnector.Models.Cogisoft;
@@ -64,7 +65,7 @@ namespace CogisoftConnector.Logic
                     asyncCommissionResponse =
                         client.PerformRequestReceiveResponse<AsyncCommisionStatusRequestCogisoftModel,
                             AsyncProcessingResultResponseCogisoftModel>(asyncCommissionRequest);
-                } while (!asyncCommissionResponse.ci[0].processed && retryCounter < 10);
+                } while (!asyncCommissionResponse.ci[0].processed && retryCounter < int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]));
 
                 if (asyncCommissionResponse.ci[0].processed)
                 {

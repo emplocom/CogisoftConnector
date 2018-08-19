@@ -36,13 +36,14 @@ namespace CogisoftConnector.Logic
 
         public IntegratedVacationsBalanceDto GetVacationDataForSingleEmployee(string employeeIdentifier, string externalVacationTypeId)
         {
-            int counter = 0;
-            IntegratedVacationsBalanceDtoWrapper balance;
+            int retryCounter = 0;
+            IntegratedVacationsBalanceDtoWrapper balance = GetVacationData(employeeIdentifier.AsList(), externalVacationTypeId).First();
 
-            do
+            while (retryCounter++ < int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]) && balance != null && balance.MissingData)
             {
+                Thread.Sleep(retryCounter * 500);
                 balance = GetVacationData(employeeIdentifier.AsList(), externalVacationTypeId).First();
-            } while (counter < int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]) && balance != null && balance.MissingData);
+            }
 
             if (balance == null || balance.MissingData)
             {
