@@ -21,19 +21,19 @@ namespace CogisoftConnector.Logic
             _cogisoftSyncVacationDataLogic = cogisoftSyncVacationDataLogic;
         }
 
-        public VacationValidationResponseModel ValidateVacationRequest(VacationValidationRequestModel emploRequest)
+        public IntegratedVacationValidationResponse ValidateVacationRequest(IntegratedVacationValidationExternalRequest emploExternalRequest)
         {
-            var getCalendarTask = Task.Run(() => GetEmployeeCalendar(emploRequest.Since, emploRequest.Until,
-                emploRequest.ExternalEmployeeId));
+            var getCalendarTask = Task.Run(() => GetEmployeeCalendar(emploExternalRequest.Since, emploExternalRequest.Until,
+                emploExternalRequest.ExternalEmployeeId));
 
             var getVacationDataTask = Task.Run(() =>
-                _cogisoftSyncVacationDataLogic.GetVacationDataForSingleEmployee(emploRequest.ExternalEmployeeId,
-                    emploRequest.ExternalVacationTypeId));
+                _cogisoftSyncVacationDataLogic.GetVacationDataForSingleEmployee(emploExternalRequest.ExternalEmployeeId,
+                    emploExternalRequest.ExternalVacationTypeId));
 
             Task.WaitAll(getCalendarTask, getVacationDataTask);
 
             return CogisoftVacationValidator.PerformValidation(getCalendarTask.Result, getVacationDataTask.Result,
-                emploRequest.IsOnDemand);
+                emploExternalRequest.IsOnDemand);
         }
 
         private GetEmployeeCalendarForPeriodResponseCogisoftModel GetEmployeeCalendar(DateTime since,

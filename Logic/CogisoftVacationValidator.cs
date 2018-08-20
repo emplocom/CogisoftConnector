@@ -12,9 +12,9 @@ namespace CogisoftConnector.Logic
         private const string ErrorNotEnoughHours = "Zbyt mało dostępnych godzin urlopu. ";
         private const string ErrorNotEnoughOnDemandDaysAndHours = "Zbyt mało dostępnych dni na żądanie oraz godzin urlopu. ";
 
-        public static VacationValidationResponseModel PerformValidation(GetEmployeeCalendarForPeriodResponseCogisoftModel employeeCalendar, IntegratedVacationsBalanceDto employeeVacationBalance, bool isOnDemand)
+        public static IntegratedVacationValidationResponse PerformValidation(GetEmployeeCalendarForPeriodResponseCogisoftModel employeeCalendar, IntegratedVacationsBalanceDto employeeVacationBalance, bool isOnDemand)
         {
-            VacationValidationResponseModel response = new VacationValidationResponseModel();
+            IntegratedVacationValidationResponse response = new IntegratedVacationValidationResponse();
 
             if (employeeCalendar.timetable[0].Cid != null)
             {

@@ -242,7 +242,7 @@ namespace CogisoftConnector.Controllers
         /// Endpoint listening for vacation validation request from emplo
         /// </summary>
         [HttpPost]
-        public HttpResponseMessage ValidateVacationRequest([FromBody] VacationValidationRequestModel model)
+        public HttpResponseMessage ValidateVacationRequest([FromBody] IntegratedVacationValidationExternalRequest model)
         {
             _logger.WriteLine($"Request received: ValidateVacationRequest, {JsonConvert.SerializeObject(model)}");
 
@@ -280,12 +280,13 @@ namespace CogisoftConnector.Controllers
 
                 if (model.ExternalVacationId != null && !model.ExternalVacationId.Equals(string.Empty))
                 {
+                    _logger.WriteLine($"Vacation Id {model.ExternalVacationId} received, performing synchronous cancellation...");
                     result = _cogisoftWebhookLogic.PerformSynchronousCancellation(model.ExternalVacationId);
                 }
 
                 if (model.HasManagedVacationDaysBalance)
                 {
-                    _cogisoftSyncVacationDataLogic.SyncVacationData(DateTime.UtcNow, model.ExternalVacationTypeId, model.ExternalEmployeeId.AsList());
+                    _cogisoftSyncVacationDataLogic.SyncVacationData(model.OperationTime, model.ExternalVacationTypeId, model.ExternalEmployeeId.AsList());
                 }
 
                 return result;

@@ -4,6 +4,6 @@ namespace CogisoftConnector.Logic
 {
     public interface ICogisoftVacationValidationLogic
     {
-        VacationValidationResponseModel ValidateVacationRequest(VacationValidationRequestModel emploRequest);
+        IntegratedVacationValidationResponse ValidateVacationRequest(IntegratedVacationValidationExternalRequest emploExternalRequest);
     }
 }

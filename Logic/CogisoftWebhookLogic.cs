@@ -93,6 +93,7 @@ namespace CogisoftConnector.Logic
 
                 if (checkIfVacationExistsResponse.VacationRequestExists())
                 {
+                    _logger.WriteLine($"Vacation request {vacationRequestId} found in Cogisoft system, performing deletion...");
                     VacationCancelledRequestCogisoftModel cogisoftRequest = new VacationCancelledRequestCogisoftModel(
                         vacationRequestId
                     );
@@ -110,14 +111,17 @@ namespace CogisoftConnector.Logic
                         new AsyncCommisionStatusRequestCogisoftModel(
                             commisionIdentifier);
 
+                    int retryCounter = 0;
+                    _logger.WriteLine($"Waiting for deletion operation to finish, retry counter: {retryCounter}...");
                     asyncResponse =
                         client.PerformRequestReceiveResponse<AsyncCommisionStatusRequestCogisoftModel,
                             AsyncProcessingResultResponseCogisoftModel>(asyncCogisoftRequest);
 
-                    int retryCounter = 6;
-                    while (!asyncResponse.ci[0].processed && retryCounter-- > 0)
+                    while (!asyncResponse.ci[0].processed && retryCounter++ < 6)
                     {
                         Thread.Sleep(5000);
+
+                        _logger.WriteLine($"Waiting for deletion operation to finish, retry counter: {retryCounter}...");
 
                         asyncResponse =
                             client.PerformRequestReceiveResponse<AsyncCommisionStatusRequestCogisoftModel,
@@ -134,23 +138,25 @@ namespace CogisoftConnector.Logic
                     }
                     else
                     {
+                        _logger.WriteLine($"Checking if request {vacationRequestId} has been successfully deleted...");
                         checkIfVacationExistsResponse =
                             client.PerformRequestReceiveResponse<GetVacationRequestByIdCogisoftModel,
                                 GetVacationRequestByIdResponseCogisoftModel>(checkIfVacationExistsRequest);
 
                         if (!checkIfVacationExistsResponse.VacationRequestExists())
                         {
-                            _logger.WriteLine($"Request deletion successful");
+                            _logger.WriteLine($"Request {vacationRequestId} deletion successful");
                             return new HttpResponseMessage(HttpStatusCode.OK);
                         }
                         else
                         {
-                            throw new Exception("Request deletion failed");
+                            throw new Exception($"Request {vacationRequestId} deletion failed");
                         }
                     }
                 }
                 else
                 {
+                    _logger.WriteLine($"Vacation request with Id {vacationRequestId} does not exist - returning OK status.");
                     return new HttpResponseMessage(HttpStatusCode.OK);
                 }
             }
