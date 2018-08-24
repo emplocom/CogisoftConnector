@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Threading;
 using System.Threading.Tasks;
 using CogisoftConnector.Models.Cogisoft;
@@ -12,27 +13,27 @@ namespace CogisoftConnector.Logic
     public class CogisoftVacationValidationLogic : ICogisoftVacationValidationLogic
     {
         private readonly ILogger _logger;
-        private readonly CogisoftSyncVacationDataLogic _cogisoftSyncVacationDataLogic;
+        private readonly ISyncVacationDataLogic _syncVacationDataLogic;
 
-        public CogisoftVacationValidationLogic(ILogger logger, CogisoftSyncVacationDataLogic cogisoftSyncVacationDataLogic)
+        public CogisoftVacationValidationLogic(ILogger logger, ISyncVacationDataLogic syncVacationDataLogic)
         {
             _logger = logger;
-            _cogisoftSyncVacationDataLogic = cogisoftSyncVacationDataLogic;
+            _syncVacationDataLogic = syncVacationDataLogic;
         }
 
-        public VacationValidationResponseModel ValidateVacationRequest(VacationValidationRequestModel emploRequest)
+        public IntegratedVacationValidationResponse ValidateVacationRequest(IntegratedVacationValidationExternalRequest emploExternalRequest)
         {
-            var getCalendarTask = Task.Run(() => GetEmployeeCalendar(emploRequest.Since, emploRequest.Until,
-                emploRequest.ExternalEmployeeId));
+            var getCalendarTask = Task.Run(() => GetEmployeeCalendar(emploExternalRequest.Since, emploExternalRequest.Until,
+                emploExternalRequest.ExternalEmployeeId));
 
             var getVacationDataTask = Task.Run(() =>
-                _cogisoftSyncVacationDataLogic.GetVacationDataForSingleEmployee(emploRequest.ExternalEmployeeId,
-                    emploRequest.ExternalVacationTypeId));
+                _syncVacationDataLogic.GetVacationDataForSingleEmployee(emploExternalRequest.ExternalEmployeeId,
+                    emploExternalRequest.ExternalVacationTypeId));
 
             Task.WaitAll(getCalendarTask, getVacationDataTask);
 
             return CogisoftVacationValidator.PerformValidation(getCalendarTask.Result, getVacationDataTask.Result,
-                emploRequest.IsOnDemand);
+                emploExternalRequest.IsOnDemand);
         }
 
         private GetEmployeeCalendarForPeriodResponseCogisoftModel GetEmployeeCalendar(DateTime since,
@@ -64,7 +65,7 @@ namespace CogisoftConnector.Logic
                     asyncCommissionResponse =
                         client.PerformRequestReceiveResponse<AsyncCommisionStatusRequestCogisoftModel,
                             AsyncProcessingResultResponseCogisoftModel>(asyncCommissionRequest);
-                } while (!asyncCommissionResponse.ci[0].processed && retryCounter < 10);
+                } while (!asyncCommissionResponse.ci[0].processed && retryCounter < int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]));
 
                 if (asyncCommissionResponse.ci[0].processed)
                 {

@@ -28,7 +28,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftRequestModels
             p = new P();
 
             fs =
-                $"FLD_DATA_ZWOLN == null{(employeeIdsToImport.Any() ? $" and FKF_OSOB.FKF_OSOB.FKF_WIZYTOWKA in [{string.Join(",", employeeIdsToImport)}]" : string.Empty)}";
+                $"FLD_DATA_ZWOLN == null{(employeeIdsToImport.Any() ? $" and FLD__ID in [{string.Join(",", employeeIdsToImport)}]" : string.Empty)}";
 
             ss = new List<string>()
             {

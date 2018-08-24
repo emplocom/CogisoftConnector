@@ -113,7 +113,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
                     mapping.ExternalPropertyName))
                 {
                     case CogisoftEmployeeProperties.NameId:
-                        userDataRowWithStatus.userDataRow.Add(mapping.EmploPropertyName, GetValueDefaultOperation(row, 1));
+                        userDataRowWithStatus.userDataRow.Add(mapping.EmploPropertyName, GetValueDefaultOperation(row, 0));
                         break;
                     case CogisoftEmployeeProperties.FirstName:
                         userDataRowWithStatus.userDataRow.Add(mapping.EmploPropertyName, GetValueDefaultOperation(row, 2));

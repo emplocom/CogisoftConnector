@@ -6,15 +6,14 @@ using System.Net.Http;
 using System.Web.Http;
 using System.Web.WebPages;
 using CogisoftConnector.Logic;
-using Hangfire;
 
 namespace CogisoftConnector.Controllers
 {
     public class VacationBalanceApiController : ApiController
     {
-        CogisoftSyncVacationDataLogic _cogisoftSyncVacationDataLogic;
+        readonly ISyncVacationDataLogic _cogisoftSyncVacationDataLogic;
 
-        public VacationBalanceApiController(CogisoftSyncVacationDataLogic cogisoftSyncVacationDataLogic)
+        public VacationBalanceApiController(ISyncVacationDataLogic cogisoftSyncVacationDataLogic)
         {
             _cogisoftSyncVacationDataLogic = cogisoftSyncVacationDataLogic;
         }

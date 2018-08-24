@@ -8,7 +8,6 @@ using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Employees;
 using EmploApiSDK.Logger;
 using EmploApiSDK.Logic.EmployeeImport;
-using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
 {
@@ -93,18 +92,9 @@ namespace CogisoftConnector.Logic
                 var loginMappingAttribute = _cogisoftEmployeeImportMappingConfiguration.PropertyMappings
                     .First(m => m.ExternalPropertyName.Equals(CogisoftEmployeeProperties.Email.ToString()));
 
-                foreach (var rowToCheckForParent in validRowsCollection)
-                {
-                    if (!validRowsCollection.Any(row =>
-                        row.userDataRow[loginMappingAttribute.EmploPropertyName]
-                            .Equals(rowToCheckForParent.userDataRow[superiorMappingAttribute.EmploPropertyName])))
-                    {
-                        rowToCheckForParent.buildStatus = false;
-                        rowToCheckForParent.AppendErrorMessage("Nie odnaleziono przełożonego");
-                    }
-                }
+                RemoveEmployeesWithNoSuperiors(validRowsCollection, loginMappingAttribute, superiorMappingAttribute);
 
-                validRowsCollection.RemoveAll(r => !r.buildStatus);
+                CycleDetector(validRowsCollection, loginMappingAttribute, superiorMappingAttribute);
 
                 var highestLevelEmployees = validRowsCollection.Where(r =>
                     r.userDataRow[superiorMappingAttribute.EmploPropertyName]
@@ -190,7 +180,83 @@ namespace CogisoftConnector.Logic
                 _logger.WriteLine($"#### REASON: {reasonGroup.reason} ####");
                 reasonGroup.rows.ForEach(row =>
                     _logger.WriteLine(
-                        $"| {string.Join(" | ", row.userDataRow.Select(r => $"{r.Key}: {r.Value}"))} | {row.errorMessage}"));
+                        $"| {string.Join(" | ", row.userDataRow.Select(r => $"{r.Key}: {r.Value}"))}"));
+            }
+        }
+
+        private void RemoveEmployeesWithNoSuperiors(List<UserDataRowWithStatus> rowsCollection, PropertyMapping loginMappingAttribute, PropertyMapping superiorMappingAttribute)
+        {
+            foreach (var rowToCheckForParent in rowsCollection)
+            {
+                if (!rowsCollection.Any(row =>
+                    row.userDataRow[loginMappingAttribute.EmploPropertyName]
+                        .Equals(rowToCheckForParent.userDataRow[superiorMappingAttribute.EmploPropertyName])))
+                {
+                    rowToCheckForParent.buildStatus = false;
+                    rowToCheckForParent.AppendErrorMessage("Nie odnaleziono przełożonego");
+                }
+            }
+
+            if (rowsCollection.RemoveAll(r => !r.buildStatus) > 0)
+            {
+                RemoveEmployeesWithNoSuperiors(rowsCollection, loginMappingAttribute, superiorMappingAttribute);
+            }
+        }
+
+        private void CycleDetector(List<UserDataRowWithStatus> rowsCollection, PropertyMapping loginMappingAttribute,
+            PropertyMapping superiorMappingAttribute)
+        {
+            foreach (var row in rowsCollection)
+            {
+                if (row.userDataRow[superiorMappingAttribute.EmploPropertyName]
+                    .Equals(row.userDataRow[loginMappingAttribute.EmploPropertyName]))
+                {
+                    //Pracownicy nawyższego szczebla mają wpisanych samych siebie jako przełożonych, to jest poprawne.
+                    continue;
+                }
+                
+                List<UserDataRowWithStatus> employeeStructureGraph = new List<UserDataRowWithStatus>();
+                employeeStructureGraph.Add(row);
+
+                UserDataRowWithStatus employee = row;
+                UserDataRowWithStatus superior;
+
+
+                do
+                {
+                    //Wyciągamy następnego przełożonego dla pracownika. Powinien zawsze istnieć, bo ludzi bez przełożonych usuwaliśmy już wcześniej inną metodą.
+                    superior = rowsCollection.First(r =>
+                        r.userDataRow[loginMappingAttribute.EmploPropertyName]
+                            .Equals(employee.userDataRow[superiorMappingAttribute.EmploPropertyName]));
+
+                    if (employeeStructureGraph.Any(r =>
+                        r.userDataRow[loginMappingAttribute.EmploPropertyName]
+                            .Equals(superior.userDataRow[loginMappingAttribute.EmploPropertyName])))
+                    {
+                        var cycleErrorMessage =
+                            $"Wykryto cykliczne przypisane przełożonych: {string.Join(" ==> ", employeeStructureGraph.Select(e => $"Login: {e.userDataRow[loginMappingAttribute.EmploPropertyName]}, Przełożony: {e.userDataRow[superiorMappingAttribute.EmploPropertyName]}"))}";
+
+                        foreach (var cycleElement in employeeStructureGraph)
+                        {
+                            cycleElement.buildStatus = false;
+                            cycleElement.AppendErrorMessage(cycleErrorMessage);
+                        }
+
+                        break;
+                        //Jeśli jakikolwiek pracownik w grafie ma taki login, jak obecnie badany przełożony - to znaczy, że mamy cykl.
+                    }
+
+                    employeeStructureGraph.Add(superior);
+                    employee = superior;
+                } while (!superior.userDataRow[superiorMappingAttribute.EmploPropertyName]
+                    .Equals(superior.userDataRow[loginMappingAttribute.EmploPropertyName]));
+
+            }
+
+            if (rowsCollection.Any(r => !r.buildStatus))
+            {
+                CycleDetector(rowsCollection.Where(r => r.buildStatus).ToList(), loginMappingAttribute, superiorMappingAttribute);
+                rowsCollection.RemoveAll(r => !r.buildStatus);
             }
         }
 

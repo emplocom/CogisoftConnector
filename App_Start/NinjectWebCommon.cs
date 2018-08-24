@@ -54,6 +54,10 @@ namespace CogisoftConnector
             bool mockMode = bool.TryParse(ConfigurationManager.AppSettings["MockMode"], out mockMode) && mockMode;
             kernel.Bind<ICogisoftVacationValidationLogic>().To<CogisoftVacationValidationMockLogic>().When(ctx => mockMode).InRequestScope();
             kernel.Bind<ICogisoftVacationValidationLogic>().To<CogisoftVacationValidationLogic>().When(ctx => !mockMode).InRequestScope();
+            kernel.Bind<IWebhookLogic>().To<CogisoftWebhookMockLogic>().When(ctx => mockMode).InRequestScope();
+            kernel.Bind<IWebhookLogic>().To<CogisoftWebhookLogic>().When(ctx => !mockMode).InRequestScope();
+            kernel.Bind<ISyncVacationDataLogic>().To<CogisoftSyncVacationDataMockLogic>().When(ctx => mockMode).InRequestScope();
+            kernel.Bind<ISyncVacationDataLogic>().To<CogisoftSyncVacationDataLogic>().When(ctx => !mockMode).InRequestScope();
             kernel.Bind<ConfigurationTestLogic>().ToSelf().InRequestScope();
             kernel.Bind<EmployeeImportLogic>().ToSelf().InRequestScope();
         }

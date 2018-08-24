@@ -17,13 +17,13 @@ namespace CogisoftConnector.Controllers
     /// </summary>
     public class VacationRequestsApiController : ApiController
     {
-        CogisoftWebhookLogic _cogisoftWebhookLogic;
-        CogisoftSyncVacationDataLogic _cogisoftSyncVacationDataLogic;
-        ICogisoftVacationValidationLogic _cogisoftVacationValidationLogic;
-        ILogger _logger;
+        readonly IWebhookLogic _cogisoftWebhookLogic;
+        readonly ISyncVacationDataLogic _cogisoftSyncVacationDataLogic;
+        readonly ICogisoftVacationValidationLogic _cogisoftVacationValidationLogic;
+        readonly ILogger _logger;
 
-        public VacationRequestsApiController(CogisoftWebhookLogic cogisoftWebhookLogic,
-            CogisoftSyncVacationDataLogic cogisoftSyncVacationData,
+        public VacationRequestsApiController(IWebhookLogic cogisoftWebhookLogic,
+            ISyncVacationDataLogic cogisoftSyncVacationData,
             ICogisoftVacationValidationLogic cogisoftVacationValidationLogic, ILogger logger)
         {
             _logger = LoggerFactory.CreateLogger(null);
@@ -242,7 +242,7 @@ namespace CogisoftConnector.Controllers
         /// Endpoint listening for vacation validation request from emplo
         /// </summary>
         [HttpPost]
-        public HttpResponseMessage ValidateVacationRequest([FromBody] VacationValidationRequestModel model)
+        public HttpResponseMessage ValidateVacationRequest([FromBody] IntegratedVacationValidationExternalRequest model)
         {
             _logger.WriteLine($"Request received: ValidateVacationRequest, {JsonConvert.SerializeObject(model)}");
 
@@ -280,12 +280,13 @@ namespace CogisoftConnector.Controllers
 
                 if (model.ExternalVacationId != null && !model.ExternalVacationId.Equals(string.Empty))
                 {
+                    _logger.WriteLine($"Vacation Id {model.ExternalVacationId} received, performing synchronous cancellation...");
                     result = _cogisoftWebhookLogic.PerformSynchronousCancellation(model.ExternalVacationId);
                 }
 
                 if (model.HasManagedVacationDaysBalance)
                 {
-                    _cogisoftSyncVacationDataLogic.SyncVacationData(DateTime.UtcNow, model.ExternalVacationTypeId, model.ExternalEmployeeId.AsList());
+                    _cogisoftSyncVacationDataLogic.SyncVacationData(model.OperationTime, model.ExternalVacationTypeId, model.ExternalEmployeeId.AsList());
                 }
 
                 return result;
@@ -307,7 +308,7 @@ namespace CogisoftConnector.Controllers
                     "application/json")
             };
 
-            _logger.WriteLine($"Status check result: ERROR, response: {JsonConvert.SerializeObject(response)}", LogLevelEnum.Error);
+            _logger.WriteLine($"{ExceptionLoggingUtils.ExceptionAsString(e)}", LogLevelEnum.Error);
             return response;
         }
     }

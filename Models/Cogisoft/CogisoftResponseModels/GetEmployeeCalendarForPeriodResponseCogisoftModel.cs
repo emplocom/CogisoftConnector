@@ -36,7 +36,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
             public DateTime D { get; set; }
 
             [JsonProperty("type")]
-            public DayType Type { get; set; }
+            public string Type { get; set; }
 
             [JsonProperty("e")]
             public E[] E { get; set; }
@@ -45,18 +45,20 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
             {
                 switch (Type)
                 {
-                    case DayType.R:
+                    case "W":
+                    case "R":
+                    case "WR":
                         return $"{D.ToShortDateString()}: Dzień pracujący, godziny: {string.Join(",", E.DistinctBy(ee => ee.Id).Select(ee => $"{ee.From} - {ee.To}"))}";
-                    case DayType.W5:
+                    case "W5":
                         return $"{D.ToShortDateString()}: Wolna sobota";
-                    case DayType.WN:
+                    case "WN":
                         return $"{D.ToShortDateString()}: Wolna niedziela";
-                    case DayType.WŚ:
+                    case "WŚ":
                         return E != null && E.Any()
                             ? $"{D.ToShortDateString()}: {string.Join(",", E.DistinctBy(ee => ee.Id).Select(ee => $"{ee.Name}"))}"
                             : $"{D.ToShortDateString()}: Wolne święto";
                     default:
-                        return Type.ToString();
+                        return Type;
                 }
             }
         }
@@ -79,10 +81,8 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
             public string XsiType { get; set; }
         }
 
-        public enum DayType { R, W5, WN, WŚ };
-
         [JsonIgnore]
-        private readonly List<DayType> _workingDayTypesCollection = new List<DayType>() { DayType.R };
+        private readonly List<string> _workingDayTypesCollection = new List<string>() { "W", "R", "WR" };
 
         public int GetWorkingDaysCount()
         {

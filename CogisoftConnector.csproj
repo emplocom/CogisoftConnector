@@ -158,15 +158,19 @@
     </Compile>
     <Compile Include="Logic\CogisoftEmployeeImportConfiguration.cs" />
     <Compile Include="Logic\CogisoftServiceClient.cs" />
+    <Compile Include="Logic\CogisoftSyncVacationDataMockLogic.cs" />
     <Compile Include="Logic\CogisoftVacationValidationMockLogic.cs" />
     <Compile Include="Logic\CogisoftVacationValidationLogic.cs" />
     <Compile Include="Logic\CogisoftVacationValidator.cs" />
     <Compile Include="Logic\CogisoftWebhookLogic.cs" />
     <Compile Include="Logic\CogisoftSyncVacationDataLogic.cs" />
+    <Compile Include="Logic\CogisoftWebhookMockLogic.cs" />
     <Compile Include="Logic\ConfigurationTestLogic.cs" />
     <Compile Include="Logic\EmployeeImportLogic.cs" />
     <Compile Include="Logic\EnumerableUtils.cs" />
+    <Compile Include="Logic\ISyncVacationDataLogic.cs" />
     <Compile Include="Logic\ICogisoftVacationValidationLogic.cs" />
+    <Compile Include="Logic\IWebhookLogic.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\GetEmployeeDataRequestCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\GetVacationRequestByIdCogisoftModel.cs" />
     <Compile Include="Models\Cogisoft\CogisoftRequestModels\TestConnectionRequestCogisoftModel.cs" />

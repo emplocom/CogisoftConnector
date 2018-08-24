@@ -15,7 +15,7 @@ using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
 {
-    public class CogisoftSyncVacationDataLogic
+    public class CogisoftSyncVacationDataLogic : ISyncVacationDataLogic
     {
         private readonly ILogger _logger;
         private readonly ApiClient _apiClient;
@@ -36,13 +36,14 @@ namespace CogisoftConnector.Logic
 
         public IntegratedVacationsBalanceDto GetVacationDataForSingleEmployee(string employeeIdentifier, string externalVacationTypeId)
         {
-            int counter = 0;
-            IntegratedVacationsBalanceDtoWrapper balance;
+            int retryCounter = 0;
+            IntegratedVacationsBalanceDtoWrapper balance = GetVacationData(employeeIdentifier.AsList(), externalVacationTypeId).First();
 
-            do
+            while (retryCounter++ < int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]) && balance != null && balance.MissingData)
             {
+                Thread.Sleep(retryCounter * 500);
                 balance = GetVacationData(employeeIdentifier.AsList(), externalVacationTypeId).First();
-            } while (counter < int.Parse(ConfigurationManager.AppSettings["GetVacationDataMaxRetryCount"]) && balance != null && balance.MissingData);
+            }
 
             if (balance == null || balance.MissingData)
             {
@@ -66,29 +67,6 @@ namespace CogisoftConnector.Logic
 
         public async Task SyncVacationDataInternal(DateTime synchronizationTime, string externalVacationTypeId, List<string> employeeIdentifiers, int counter = 0)
         {
-            bool mockMode;
-            if (bool.TryParse(ConfigurationManager.AppSettings["MockMode"], out mockMode) && mockMode &&
-                employeeIdentifiers != null)
-            {
-                await Import(synchronizationTime, employeeIdentifiers.Select(ei =>
-                    new IntegratedVacationsBalanceDtoWrapper()
-                    {
-                        MissingData = false,
-                        Result = new IntegratedVacationsBalanceDto()
-                        {
-                            ExternalEmployeeId = ei,
-                            OnDemandDays = -1,
-                            OutstandingDays = -1,
-                            OutstandingHours = -1,
-                            AvailableHours = -1,
-                            AvailableDays = -1,
-                            ExternalVacationTypeId = externalVacationTypeId
-                        }
-                    }).ToList());
-                return;
-            }
-
-
             if (counter == 0)
             {
                 //The first request might provide us with outdated data.

@@ -2,15 +2,26 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using CogisoftConnector.Models.Cogisoft.CogisoftResponseModels;
 using EmploApiSDK.ApiModels.Vacations.IntegratedVacationBalances;
 using EmploApiSDK.ApiModels.Vacations.IntegratedVacationValidation;
+using EmploApiSDK.Logger;
 using Newtonsoft.Json;
 
 namespace CogisoftConnector.Logic
 {
     public class CogisoftVacationValidationMockLogic : ICogisoftVacationValidationLogic
     {
+        private readonly ILogger _logger;
+        private readonly ISyncVacationDataLogic _syncVacationDataLogic;
+
+        public CogisoftVacationValidationMockLogic(ILogger logger, ISyncVacationDataLogic syncVacationDataLogic)
+        {
+            _logger = logger;
+            _syncVacationDataLogic = syncVacationDataLogic;
+        }
+
         public class TestCase
         {
             public DateTime Since { get; set; }
@@ -28,7 +39,7 @@ namespace CogisoftConnector.Logic
             }
         }
 
-        public VacationValidationResponseModel ValidateVacationRequest(VacationValidationRequestModel emploRequest)
+        public IntegratedVacationValidationResponse ValidateVacationRequest(IntegratedVacationValidationExternalRequest emploExternalRequest)
         {
             List<TestCase> testCases = new List<TestCase>();
             testCases.Add(new TestCase(new DateTime(2018, 8, 1), new DateTime(2018, 8, 7), "{\"f\":\"json\",\"timetable\":[{\"qf\":false,\"day\":[{\"d\":\"2018-08-01\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-08-02\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-08-03\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-08-04\",\"type\":\"W5\",\"e\":[]},{\"d\":\"2018-08-05\",\"type\":\"WN\",\"e\":[]},{\"d\":\"2018-08-06\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-08-07\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]}],\"bc\":[]}]}"));
@@ -38,18 +49,21 @@ namespace CogisoftConnector.Logic
             testCases.Add(new TestCase(new DateTime(2018, 11, 1), new DateTime(2018, 11, 15), "{\"f\":\"json\",\"timetable\":[{\"qf\":false,\"day\":[{\"d\":\"2018-11-01\",\"type\":\"WŚ\",\"e\":[{\"name\":\"Uroczystość Wszystkich Świętych\",\"xsi.type\":\"ns0.holiday\"}]},{\"d\":\"2018-11-02\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-11-03\",\"type\":\"W5\",\"e\":[]},{\"d\":\"2018-11-04\",\"type\":\"WN\",\"e\":[]},{\"d\":\"2018-11-05\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-11-06\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-11-07\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-11-08\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-11-09\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-11-10\",\"type\":\"W5\",\"e\":[]},{\"d\":\"2018-11-11\",\"type\":\"WN\",\"e\":[]},{\"d\":\"2018-11-12\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-11-13\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-11-14\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-11-15\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]}],\"bc\":[]}]}") { Delay = 20000 });
             testCases.Add(new TestCase(new DateTime(2018, 11, 1), new DateTime(2018, 11, 30), "{\"f\":\"json\",\"timetable\":[{\"qf\":false,\"day\":[{\"d\":\"2018-08-01\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-08-02\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]},{\"d\":\"2018-08-03\",\"type\":\"R\",\"e\":[{\"id\":1,\"from\":\"07:30:00\",\"to\":\"15:30:00\",\"xsi.type\":\"ns0.shift\"}]}],\"bc\":[]}]}") {Delay = 55000, ShouldBeUnfinished = true});
 
-            var testCase = testCases.FirstOrDefault(tc => tc.Since == emploRequest.Since && tc.Until == emploRequest.Until);
+            var testCase = testCases.FirstOrDefault(tc => tc.Since == emploExternalRequest.Since && tc.Until == emploExternalRequest.Until);
 
             if (testCase == null)
             {
-                return new VacationValidationResponseModel(){Message = "[MockMode] OK", RequestIsValid = true};
+                return new IntegratedVacationValidationResponse(){Message = "[MockMode] OK", RequestIsValid = true};
             }
 
             var employeeCalendar = GetMockedEmployeeCalendar(testCase);
-            var employeeVacationBalance = GetMockedBalance(emploRequest.ExternalEmployeeId, emploRequest.ExternalVacationTypeId);
+            var getVacationDataTask = Task.Run(() =>
+                _syncVacationDataLogic.GetVacationDataForSingleEmployee(emploExternalRequest.ExternalEmployeeId,
+                    emploExternalRequest.ExternalVacationTypeId));
+            Task.WaitAll(getVacationDataTask);
 
-            return CogisoftVacationValidator.PerformValidation(employeeCalendar, employeeVacationBalance,
-                emploRequest.IsOnDemand);
+            return CogisoftVacationValidator.PerformValidation(employeeCalendar, getVacationDataTask.Result,
+                emploExternalRequest.IsOnDemand);
         }
 
         private GetEmployeeCalendarForPeriodResponseCogisoftModel GetMockedEmployeeCalendar(TestCase testCase)
@@ -61,20 +75,6 @@ namespace CogisoftConnector.Logic
                 calendar.timetable[0].Cid = "jakasWartosc";
             }
             return calendar;
-        }
-
-        private IntegratedVacationsBalanceDto GetMockedBalance(string externalEmployeeId, string externalVacationTypeId)
-        {
-            return new IntegratedVacationsBalanceDto()
-            {
-                ExternalEmployeeId = externalEmployeeId,
-                OnDemandDays = 4,
-                OutstandingDays = 1,
-                OutstandingHours = 8,
-                AvailableHours = 216,
-                AvailableDays = 27,
-                ExternalVacationTypeId = externalVacationTypeId
-            };
         }
     }
 }
