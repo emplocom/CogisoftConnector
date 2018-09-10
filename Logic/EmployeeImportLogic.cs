@@ -206,6 +206,8 @@ namespace CogisoftConnector.Logic
         private void CycleDetector(List<UserDataRowWithStatus> rowsCollection, PropertyMapping loginMappingAttribute,
             PropertyMapping superiorMappingAttribute)
         {
+            List<UserDataRowWithStatus> rowsWithCycles = new List<UserDataRowWithStatus>();
+
             foreach (var row in rowsCollection)
             {
                 if (row.userDataRow[superiorMappingAttribute.EmploPropertyName]
@@ -214,13 +216,13 @@ namespace CogisoftConnector.Logic
                     //Pracownicy nawyższego szczebla mają wpisanych samych siebie jako przełożonych, to jest poprawne.
                     continue;
                 }
-                
+
+
                 List<UserDataRowWithStatus> employeeStructureGraph = new List<UserDataRowWithStatus>();
                 employeeStructureGraph.Add(row);
 
                 UserDataRowWithStatus employee = row;
                 UserDataRowWithStatus superior;
-
 
                 do
                 {
@@ -236,11 +238,9 @@ namespace CogisoftConnector.Logic
                         var cycleErrorMessage =
                             $"Wykryto cykliczne przypisane przełożonych: {string.Join(" ==> ", employeeStructureGraph.Select(e => $"Login: {e.userDataRow[loginMappingAttribute.EmploPropertyName]}, Przełożony: {e.userDataRow[superiorMappingAttribute.EmploPropertyName]}"))}";
 
-                        foreach (var cycleElement in employeeStructureGraph)
-                        {
-                            cycleElement.buildStatus = false;
-                            cycleElement.AppendErrorMessage(cycleErrorMessage);
-                        }
+                        row.buildStatus = false;
+                        row.AppendErrorMessage(cycleErrorMessage);
+                        rowsWithCycles.Add(row);
 
                         break;
                         //Jeśli jakikolwiek pracownik w grafie ma taki login, jak obecnie badany przełożony - to znaczy, że mamy cykl.
@@ -250,14 +250,9 @@ namespace CogisoftConnector.Logic
                     employee = superior;
                 } while (!superior.userDataRow[superiorMappingAttribute.EmploPropertyName]
                     .Equals(superior.userDataRow[loginMappingAttribute.EmploPropertyName]));
-
             }
 
-            if (rowsCollection.Any(r => !r.buildStatus))
-            {
-                CycleDetector(rowsCollection.Where(r => r.buildStatus).ToList(), loginMappingAttribute, superiorMappingAttribute);
-                rowsCollection.RemoveAll(r => !r.buildStatus);
-            }
+            rowsWithCycles.ForEach(r => rowsCollection.Remove(r));
         }
 
         public async Task ImportEmployeeData(List<string> employeeIdsToImport = null)
