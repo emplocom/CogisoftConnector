@@ -102,5 +102,12 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
         {
             return timetable[0].Day.Select(day => day.GetDescription()).ToList();
         }
+
+        public bool CalendarIsReady()
+        {
+            return
+                this.timetable != null && this.timetable[0] != null &&
+                ("-1".Equals(this.timetable[0].Cid) || this.timetable[0].Cid == null);
+        }
     }
 }

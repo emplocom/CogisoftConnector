@@ -48,7 +48,7 @@ namespace CogisoftConnector.Logic
                     client.PerformRequestReceiveResponse<GetEmployeeCalendarForPeriodRequestCogisoftModel,
                         GetEmployeeCalendarForPeriodResponseCogisoftModel>(employeeCalendarRequest);
 
-                if (employeeCalendarResponse.timetable[0].Cid == null)
+                if (employeeCalendarResponse.CalendarIsReady())
                 {
                     return employeeCalendarResponse;
                 }

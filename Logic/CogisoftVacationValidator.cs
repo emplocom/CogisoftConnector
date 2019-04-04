@@ -16,7 +16,7 @@ namespace CogisoftConnector.Logic
         {
             IntegratedVacationValidationResponse response = new IntegratedVacationValidationResponse();
 
-            if (employeeCalendar.timetable[0].Cid != null)
+            if (!employeeCalendar.CalendarIsReady())
             {
                 response.RequestIsValid = false;
                 response.Message = "Wystąpił błąd - kalendarz nie jest jeszcze gotowy. Zaczekaj kilka minut i spróbuj ponownie.";
