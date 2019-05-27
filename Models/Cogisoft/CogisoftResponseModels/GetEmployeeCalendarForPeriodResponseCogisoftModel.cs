@@ -45,10 +45,12 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
             {
                 switch (Type)
                 {
-                    case "W":
                     case "R":
-                    case "WR":
                         return $"{D.ToShortDateString()}: Dzień pracujący, godziny: {string.Join(",", E.DistinctBy(ee => ee.Id).Select(ee => $"{ee.From} - {ee.To}"))}";
+                    case "X":
+                        return $"{D.ToShortDateString()}: Brak harmonogramu na ten dzień";
+                    case "WR":
+                        return $"{D.ToShortDateString()}: Dzień wolny";
                     case "W5":
                         return $"{D.ToShortDateString()}: Wolna sobota";
                     case "WN":
@@ -82,7 +84,7 @@ namespace CogisoftConnector.Models.Cogisoft.CogisoftResponseModels
         }
 
         [JsonIgnore]
-        private readonly List<string> _workingDayTypesCollection = new List<string>() { "W", "R", "WR" };
+        private readonly List<string> _workingDayTypesCollection = new List<string>() { "R" };
 
         public int GetWorkingDaysCount()
         {
