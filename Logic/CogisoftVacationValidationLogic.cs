@@ -23,6 +23,12 @@ namespace CogisoftConnector.Logic
 
         public IntegratedVacationValidationResponse ValidateVacationRequest(IntegratedVacationValidationExternalRequest emploExternalRequest)
         {
+            var initialValidationResult = CogisoftVacationValidator.PerformRequestParametersValidation(emploExternalRequest);
+            if (!initialValidationResult.RequestIsValid)
+            {
+                return initialValidationResult;
+            }
+
             var getCalendarTask = Task.Run(() => GetEmployeeCalendar(emploExternalRequest.Since, emploExternalRequest.Until,
                 emploExternalRequest.ExternalEmployeeId));
 
@@ -32,7 +38,7 @@ namespace CogisoftConnector.Logic
 
             Task.WaitAll(getCalendarTask, getVacationDataTask);
 
-            return CogisoftVacationValidator.PerformValidation(getCalendarTask.Result, getVacationDataTask.Result,
+            return CogisoftVacationValidator.PerformDataValidation(getCalendarTask.Result, getVacationDataTask.Result,
                 emploExternalRequest.IsOnDemand);
         }
 

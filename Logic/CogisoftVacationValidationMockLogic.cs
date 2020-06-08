@@ -62,7 +62,7 @@ namespace CogisoftConnector.Logic
                     emploExternalRequest.ExternalVacationTypeId));
             Task.WaitAll(getVacationDataTask);
 
-            return CogisoftVacationValidator.PerformValidation(employeeCalendar, getVacationDataTask.Result,
+            return CogisoftVacationValidator.PerformDataValidation(employeeCalendar, getVacationDataTask.Result,
                 emploExternalRequest.IsOnDemand);
         }
 
